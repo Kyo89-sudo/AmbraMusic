@@ -1,0 +1,35 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024" width="1024" height="1024">
+<defs>
+ <linearGradient id="g" gradientUnits="userSpaceOnUse" x1="300" y1="140" x2="830" y2="920">
+  <stop offset="0" stop-color="#FFDC3E"/><stop offset="0.36" stop-color="#FFA314"/>
+  <stop offset="0.72" stop-color="#FF680A"/><stop offset="1" stop-color="#E2400B"/></linearGradient>
+ <radialGradient id="head" gradientUnits="userSpaceOnUse" cx="231" cy="713" r="238.0">
+  <stop offset="0" stop-color="#FFE650" stop-opacity="0.95"/><stop offset="0.45" stop-color="#FFA014" stop-opacity="0.35"/><stop offset="1" stop-color="#FF8A10" stop-opacity="0"/></radialGradient>
+ <!-- "goo": merges the strokes into one body with soft fillets at every joint -->
+ <filter id="goo" filterUnits="userSpaceOnUse" x="0" y="0" width="1024" height="1024">
+  <feGaussianBlur stdDeviation="10"/><feColorMatrix type="matrix" values="1 0 0 0 0  0 1 0 0 0  0 0 1 0 0  0 0 0 28 -13"/></filter>
+ <filter id="rim" filterUnits="userSpaceOnUse" x="0" y="0" width="1024" height="1024">
+  <feGaussianBlur stdDeviation="10"/><feColorMatrix type="matrix" values="1 0 0 0 0  0 1 0 0 0  0 0 1 0 0  0 0 0 28 -13"/><feMorphology operator="dilate" radius="3"/></filter>
+ <filter id="b18" x="-50%" y="-50%" width="200%" height="200%"><feGaussianBlur stdDeviation="18"/></filter>
+ <filter id="b8" x="-50%" y="-50%" width="200%" height="200%"><feGaussianBlur stdDeviation="8"/></filter>
+ <mask id="body" maskUnits="userSpaceOnUse" x="0" y="0" width="1024" height="1024"><g filter="url(#goo)"><path d="M800 805 L577.9 276.7 Q512 120 463.0 282.8 L330 725" stroke="#fff" stroke-width="128" stroke-linecap="round" fill="none"/>
+<path d="M384.1 545 L690.7 545" stroke="#fff" stroke-width="94" fill="none"/>
+<ellipse cx="286" cy="778" rx="150" ry="120" transform="rotate(-24 286 778)" fill="#fff"/></g></mask>
+ <mask id="rimm" maskUnits="userSpaceOnUse" x="0" y="0" width="1024" height="1024"><g filter="url(#rim)"><path d="M800 805 L577.9 276.7 Q512 120 463.0 282.8 L330 725" stroke="#fff" stroke-width="128" stroke-linecap="round" fill="none"/>
+<path d="M384.1 545 L690.7 545" stroke="#fff" stroke-width="94" fill="none"/>
+<ellipse cx="286" cy="778" rx="150" ry="120" transform="rotate(-24 286 778)" fill="#fff"/></g></mask>
+</defs>
+<rect width="1024" height="1024" fill="#C2340A" mask="url(#rimm)"/>
+<g mask="url(#body)">
+ <rect width="1024" height="1024" fill="url(#g)"/>
+ <!-- inner depth around the A's counter, the same deep red the original uses inside its loop -->
+ <path d="M404.1 515 L512 270 L670.7 515 Z" fill="none" stroke="#A52800" stroke-opacity="0.42" stroke-width="70" stroke-linejoin="round" filter="url(#b18)"/>
+ <!-- depth where the stem meets the note head -->
+ <ellipse cx="316" cy="800" rx="178" ry="148" transform="rotate(-24 316 800)" fill="none" stroke="#8C2000" stroke-opacity="0.35" stroke-width="40" filter="url(#b18)"/>
+ <ellipse cx="286" cy="778" rx="150" ry="120" transform="rotate(-24 286 778)" fill="url(#head)"/>
+ <!-- gloss -->
+ <path d="M472 168 Q507 125 550 160" stroke="#FFF7C0" stroke-opacity="0.6" stroke-width="20" stroke-linecap="round" fill="none" filter="url(#b8)"/>
+ <path d="M598 330 L754 655" stroke="#FFE580" stroke-opacity="0.3" stroke-width="18" stroke-linecap="round" fill="none" filter="url(#b8)"/>
+ <ellipse cx="234" cy="718" rx="50" ry="27" transform="rotate(-38 234 718)" fill="#FFFAD0" fill-opacity="0.5" filter="url(#b8)"/>
+</g>
+</svg>

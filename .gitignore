@@ -1,0 +1,14 @@
+/target/
+/dist/
+/native/
+COMPILAZIONE.log
+*.cookies
+settings.json
+session.dat
+webview/
+
+# Dati e configurazioni locali
+.env
+.env.*
+!.env.example
+*.log

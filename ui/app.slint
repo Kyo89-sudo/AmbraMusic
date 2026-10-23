@@ -1,0 +1,1263 @@
+import { TextEdit, ScrollView, Spinner, Palette } from "std-widgets.slint";
+// Icone Lucide (ISC) come font: il testo è reso con antialiasing e hinting, a differenza dei
+// tracciati sottili disegnati a mano. Sottoinsieme dei soli glifi usati, vedi assets/fonts.
+import "../assets/fonts/lucide-subset.ttf";
+
+export struct MusicRow { id: string, title: string, subtitle: string, duration: string, cover: image, thumb: image, has-cover: bool, tint: color, kind: string, liked: bool }
+/// Un commento (o una risposta, con `reply`) del brano in ascolto.
+export struct CommentItem { id: string, author: string, initial: string, avatar: image, has-avatar: bool, text: string, published: string,
+    likes: string, liked: bool, can-like: bool, can-reply: bool, replies: string, reply: bool, pinned: bool, hearted: bool, creator: bool, own: bool }
+/// Uno scaffale. `index` è la posizione nel backend (per aprire gli elementi).
+export struct ShelfData { index: int, title: string, songs: bool, items: [MusicRow] }
+
+// Colori. L'ambra (sfumatura e bordo) è quella dell'icona, in entrambi i temi.
+export global Theme {
+    in-out property <bool> dark: true;
+    out property <color> bg: dark ? #101012 : #f7f7f8;
+    out property <color> bar: dark ? #151517 : #ffffff;
+    out property <color> side: dark ? #131315 : #f0f0f2;
+    out property <color> card: dark ? #1c1c20 : #ffffff;
+    out property <color> card-hover: dark ? #26252a : #f0f0f3;
+    out property <color> hover: dark ? #222226 : #e8e8ec;
+    out property <color> pressed: dark ? #2e2d33 : #dedee4;
+    out property <color> line: dark ? #2a292e : #dedee3;
+    out property <color> field: dark ? #1d1d21 : #ffffff;
+    out property <color> text: dark ? #f5f5f7 : #19191d;
+    out property <color> muted: dark ? #acacb6 : #60606b;
+    out property <color> faint: dark ? #8b8b98 : #747480;
+    out property <color> selected: dark ? #30271f : #ffead6;
+    out property <color> accent: dark ? #ffad5c : #c9520a;
+    out property <color> player: dark ? #161618 : #ffffff;
+    out property <color> dialog: dark ? #1f1e22 : #ffffff;
+    out property <color> rim: #c3350a;
+    out property <color> on-amber: #2a1205;
+    out property <brush> amber: @linear-gradient(135deg, #ffd93c 0%, #ffa013 38%, #ff680a 74%, #e2400b 100%);
+    out property <brush> amber-soft: @linear-gradient(90deg, #ffc23a 0%, #ff7a0c 100%);
+}
+
+// Codici dei glifi Lucide.
+export global G {
+    out property <string> play: "\u{e13c}";
+    out property <string> pause: "\u{e12e}";
+    out property <string> prev: "\u{e15f}";
+    out property <string> next: "\u{e160}";
+    out property <string> shuffle: "\u{e15e}";
+    out property <string> repeat: "\u{e146}";
+    out property <string> repeat-one: "\u{e1fd}";
+    out property <string> heart: "\u{e0f2}";
+    out property <string> plus: "\u{e13d}";
+    out property <string> home: "\u{e0f5}";
+    out property <string> search: "\u{e151}";
+    out property <string> library: "\u{e54e}";
+    out property <string> settings: "\u{e154}";
+    out property <string> queue: "\u{e2e0}";
+    out property <string> down: "\u{e06d}";
+    out property <string> up: "\u{e070}";
+    out property <string> left: "\u{e06e}";
+    out property <string> right: "\u{e06f}";
+    out property <string> close: "\u{e1b2}";
+    out property <string> sun: "\u{e178}";
+    out property <string> moon: "\u{e11e}";
+    out property <string> music: "\u{e122}";
+    out property <string> volume: "\u{e1ab}";
+    out property <string> volume-low: "\u{e1aa}";
+    out property <string> mute: "\u{e1ac}";
+    out property <string> login: "\u{e10d}";
+    out property <string> disc: "\u{e494}";
+    out property <string> user: "\u{e19f}";
+    out property <string> star: "\u{e176}";
+    out property <string> refresh: "\u{e145}";
+    out property <string> trash: "\u{e18e}";
+    out property <string> external: "\u{e0b9}";
+    out property <string> account: "\u{e461}";
+    out property <string> comment: "\u{e116}";
+    out property <string> send: "\u{e4f2}";
+    out property <string> thumb-up: "\u{e18a}";
+    out property <string> pin: "\u{e259}";
+    out property <string> reply: "\u{e0a2}";
+    out property <string> sort: "\u{e046}";
+}
+
+// Forme piene (cuore pieno, play/pausa grandi), dove un glifo a contorno non basta.
+global Shape {
+    out property <string> heart: "M12 20.3 C 4.9 14.8 2.8 12.2 2.8 8.9 C 2.8 6.1 5 4 7.7 4 C 9.4 4 11 4.9 12 6.3 C 13 4.9 14.6 4 16.3 4 C 19 4 21.2 6.1 21.2 8.9 C 21.2 12.2 19.1 14.8 12 20.3 Z";
+    out property <string> play: "M8.5 5.2 C 8.5 4.4 9.3 4 10 4.4 L 19 11.2 C 19.6 11.6 19.6 12.4 19 12.8 L 10 19.6 C 9.3 20 8.5 19.6 8.5 18.8 Z";
+    out property <string> pause: "M7 5 L 10.3 5 L 10.3 19 L 7 19 Z M 13.7 5 L 17 5 L 17 19 L 13.7 19 Z";
+}
+
+component Icon inherits Text {
+    in property <length> size: 16px;
+    font-family: "lucide";
+    font-size: root.size;
+    width: root.size; height: root.size;
+    horizontal-alignment: center; vertical-alignment: center;
+    color: Theme.text;
+}
+
+component FilledShape inherits Path {
+    in property <string> data;
+    in property <color> tint;
+    in property <length> size: 18px;
+    width: root.size; height: root.size;
+    viewbox-width: 24; viewbox-height: 24;
+    commands: root.data;
+    fill: root.tint;
+}
+
+// Copertina: l'immagine vera oppure, finché manca, una copertina generata come in Limusic
+// (sfumatura del colore del titolo + simbolo del tipo), mai il logo dell'app.
+component CoverArt inherits Rectangle {
+    in property <image> source;
+    in property <bool> has-cover;
+    in property <color> tint: #8a6a55;
+    in property <string> kind: "song";
+    clip: true;
+    property <color> base: root.tint.alpha > 0 ? root.tint : #8a6a55;
+    background: root.has-cover ? Theme.card : @linear-gradient(135deg, root.base 0%, root.base.darker(0.55) 100%);
+    if root.has-cover: Image { source: root.source; width: 100%; height: 100%; image-fit: ImageFit.cover; }
+    if !root.has-cover: Icon {
+        text: root.kind == "artist" ? G.user : root.kind == "album" ? G.disc : root.kind == "playlist" ? G.queue : G.music;
+        size: min(root.width, root.height) * 0.42; color: #ffffffd0;
+        x: (parent.width - self.width) / 2; y: (parent.height - self.height) / 2; }
+}
+
+// Foto del profilo rotonda; senza foto, l'iniziale del nome su sfondo ambra.
+component Avatar inherits Rectangle {
+    in property <image> source;
+    in property <bool> has-image;
+    /// Iniziale da mostrare senza foto (calcolata in Rust).
+    in property <string> name;
+    width: 28px; height: 28px; border-radius: self.width / 2; clip: true;
+    background: root.has-image ? Theme.card : Theme.amber;
+    if root.has-image: Image { source: root.source; width: 100%; height: 100%; image-fit: ImageFit.cover; }
+    if !root.has-image: Text { text: root.name == "" ? "?" : root.name; color: Theme.on-amber; font-size: root.height * 0.48; font-weight: 700;
+        width: 100%; height: 100%; horizontal-alignment: center; vertical-alignment: center; overflow: clip; }
+}
+
+// Pulsante dell'account in alto: foto + nome (come il selettore account di Limusic).
+component AccountChip inherits Rectangle {
+    in property <image> avatar;
+    in property <bool> has-avatar;
+    in property <string> name;
+    in property <string> initial;
+    callback clicked;
+    height: 38px; border-radius: 19px; width: row.preferred-width; horizontal-stretch: 0;
+    background: t.pressed ? Theme.pressed : t.has-hover ? Theme.hover : transparent;
+    border-width: 1px; border-color: Theme.line;
+    row := HorizontalLayout { padding-left: 6px; padding-right: 16px; spacing: 10px; alignment: center;
+        Avatar { source: root.avatar; has-image: root.has-avatar; name: root.initial; y: (parent.height - self.height) / 2; }
+        Text { text: root.name; color: Theme.text; font-size: 14px; font-weight: 600; vertical-alignment: center; overflow: elide; max-width: 170px; }
+    }
+    t := TouchArea { mouse-cursor: pointer; clicked => { root.clicked(); } }
+}
+
+// Pulsante con testo o glifo. "accent" usa la sfumatura ambra dell'icona.
+component Action inherits Rectangle {
+    in property <string> text;
+    in property <string> glyph;
+    in property <bool> heart: false;
+    in property <bool> filled: false;
+    in property <length> icon-size: 18px;
+    in property <bool> selected: false;
+    in property <bool> accent: false;
+    in property <bool> enabled: true;
+    in property <length> font-size: 14px;
+    in property <color> glyph-color: root.accent ? Theme.on-amber : root.selected ? Theme.accent : root.enabled ? Theme.text : Theme.faint;
+    callback clicked;
+    height: 36px; min-width: 36px;
+    border-radius: 10px;
+    background: root.accent ? Theme.amber : (touch.pressed && root.enabled) ? Theme.pressed : root.selected ? Theme.selected : (touch.has-hover && root.enabled) ? Theme.hover : transparent;
+    border-width: root.accent ? 1px : 0px;
+    border-color: Theme.rim;
+    if root.accent: Rectangle { x: 6px; y: 2px; width: parent.width - 12px; height: parent.height * 0.42; border-radius: 8px;
+        background: @linear-gradient(180deg, #ffffff55 0%, #ffffff00 100%); }
+    if root.accent && touch.pressed: Rectangle { border-radius: parent.border-radius; background: #0000001f; }
+    if root.heart && root.filled: FilledShape { data: Shape.heart; tint: Theme.accent; size: root.icon-size;
+        x: (parent.width - self.width) / 2; y: (parent.height - self.height) / 2; }
+    if root.glyph != "" && !(root.heart && root.filled): Icon { text: root.glyph; size: root.icon-size; color: root.glyph-color;
+        x: (parent.width - self.width) / 2; y: (parent.height - self.height) / 2; }
+    if root.glyph == "" && !root.heart: Text { text: root.text; color: root.accent ? Theme.on-amber : root.selected ? Theme.accent : Theme.text;
+        font-size: root.font-size; font-weight: root.accent ? 600 : 400; horizontal-alignment: center; vertical-alignment: center; }
+    touch := TouchArea { enabled: root.enabled; mouse-cursor: root.enabled ? pointer : default; clicked => { root.clicked(); } }
+}
+
+// Pulsante a pillola con glifo e testo (Riproduci / Riproduzione casuale nella testata).
+component Pill inherits Rectangle {
+    in property <string> glyph;
+    in property <string> text;
+    in property <bool> accent;
+    callback clicked;
+    height: 38px; border-radius: 19px;
+    min-width: row.preferred-width;
+    background: root.accent ? Theme.amber : t.pressed ? Theme.pressed : t.has-hover ? Theme.hover : transparent;
+    border-width: 1px; border-color: root.accent ? Theme.rim : Theme.line;
+    if root.accent: Rectangle { x: 10px; y: 2px; width: parent.width - 20px; height: parent.height * 0.4; border-radius: 10px;
+        background: @linear-gradient(180deg, #ffffff55 0%, #ffffff00 100%); }
+    row := HorizontalLayout { padding-left: 18px; padding-right: 20px; spacing: 8px; alignment: center;
+        Icon { text: root.glyph; size: 16px; color: root.accent ? Theme.on-amber : Theme.text; y: (parent.height - self.height) / 2; }
+        Text { text: root.text; color: root.accent ? Theme.on-amber : Theme.text; font-size: 14px; font-weight: 600; vertical-alignment: center; }
+    }
+    t := TouchArea { mouse-cursor: pointer; clicked => { root.clicked(); } }
+}
+
+// Play rotondo, lucido come la testa della nota.
+component PlayButton inherits Rectangle {
+    in property <bool> playing;
+    in property <length> size: 42px;
+    callback clicked;
+    width: root.size; height: root.size; border-radius: root.size / 2;
+    background: Theme.amber; border-width: 1px; border-color: Theme.rim;
+    Rectangle { x: parent.width * 0.19; y: parent.height * 0.1; width: parent.width * 0.42; height: parent.height * 0.25; border-radius: self.height / 2; background: #ffffff66; }
+    if t.pressed: Rectangle { border-radius: parent.border-radius; background: #00000022; }
+    FilledShape { data: root.playing ? Shape.pause : Shape.play; tint: Theme.on-amber; size: root.size * 0.46;
+        x: (parent.width - self.width) / 2 + (root.playing ? 0px : root.size * 0.02); y: (parent.height - self.height) / 2; }
+    t := TouchArea { mouse-cursor: pointer; clicked => { root.clicked(); } }
+}
+
+// Cursore con traccia ambra e manopola lucida.
+component AmberSlider inherits Rectangle {
+    in property <float> value;
+    in property <float> minimum: 0;
+    in property <float> maximum: 100;
+    callback changed(float);
+    property <bool> dragging: false;
+    property <float> drag: 0;
+    property <float> shown: dragging ? drag : value;
+    property <float> ratio: root.maximum > root.minimum ? clamp((root.shown - root.minimum) / (root.maximum - root.minimum), 0, 1) : 0;
+    in property <length> track-height: 3px;
+    in property <length> handle-size: 12px;
+    height: 24px; min-width: 60px;
+    function pick(px: length) {
+        root.drag = root.minimum + clamp(px / max(1px, root.width), 0, 1) * (root.maximum - root.minimum);
+        root.changed(root.drag);
+    }
+    Rectangle { y: (parent.height - root.track-height) / 2; height: root.track-height; border-radius: root.track-height / 2; background: Theme.line; }
+    Rectangle { x: 0; y: (parent.height - root.track-height) / 2; height: root.track-height; width: max(3px, root.ratio * root.width); border-radius: root.track-height / 2; background: Theme.amber-soft; }
+    if ta.has-hover || root.dragging: Rectangle {
+        width: root.handle-size; height: root.handle-size; border-radius: root.handle-size / 2;
+        x: clamp(root.ratio * root.width - root.handle-size / 2, 0, root.width - root.handle-size); y: (parent.height - root.handle-size) / 2;
+        background: Theme.amber; border-width: 1px; border-color: Theme.rim;
+    }
+    ta := TouchArea {
+        mouse-cursor: pointer;
+        pointer-event(e) => {
+            if e.kind == PointerEventKind.down && e.button == PointerEventButton.left { root.dragging = true; root.pick(self.mouse-x); }
+            if e.kind == PointerEventKind.up { root.dragging = false; }
+        }
+        moved => { if self.pressed { root.pick(self.mouse-x); } }
+    }
+}
+
+component Toggle inherits Rectangle {
+    in-out property <bool> checked;
+    callback toggled(bool);
+    width: 42px; height: 24px; border-radius: 12px;
+    background: root.checked ? Theme.amber-soft : Theme.pressed;
+    border-width: 1px; border-color: root.checked ? Theme.rim : Theme.faint.with-alpha(0.5);
+    Rectangle { width: 18px; height: 18px; border-radius: 9px; y: 2px; x: root.checked ? parent.width - 21px : 2px;
+        background: #ffffff; border-width: 1px; border-color: root.checked ? #e2400b55 : #00000022;
+        animate x { duration: 140ms; easing: ease-out; } }
+    TouchArea { mouse-cursor: pointer; clicked => { root.checked = !root.checked; root.toggled(root.checked); } }
+}
+
+component Segmented inherits Rectangle {
+    in property <string> left;
+    in property <string> right;
+    in property <bool> right-on;
+    callback picked(bool);
+    height: 34px; width: 220px; border-radius: 10px; background: Theme.hover;
+    HorizontalLayout { padding: 3px; spacing: 3px;
+        Action { text: root.left; height: 28px; accent: !root.right-on; font-size: 13px; clicked => { root.picked(false); } }
+        Action { text: root.right; height: 28px; accent: root.right-on; font-size: 13px; clicked => { root.picked(true); } }
+    }
+}
+
+// Pillola dei filtri di ricerca (Tutti, Brani, Video, …).
+component Chip inherits Rectangle {
+    in property <string> text;
+    in property <bool> active;
+    callback clicked;
+    height: 32px; border-radius: 16px; min-width: label.preferred-width + 30px;
+    background: root.active ? Theme.text : t.has-hover ? Theme.hover : Theme.card;
+    border-width: 1px; border-color: root.active ? Theme.text : Theme.line;
+    label := Text { text: root.text; color: root.active ? Theme.bg : Theme.text; font-size: 13px; font-weight: 600; horizontal-alignment: center; vertical-alignment: center; }
+    t := TouchArea { mouse-cursor: pointer; clicked => { root.clicked(); } }
+}
+
+component SearchField inherits Rectangle {
+    in-out property <string> text;
+    in property <string> placeholder;
+    callback accepted(string);
+    callback edited(string);
+    callback cleared;
+    out property <bool> focused: input.has-focus;
+    public function focus-input() { input.focus(); }
+    height: 38px; border-radius: 19px; background: Theme.field;
+    border-width: input.has-focus ? 2px : 1px; border-color: input.has-focus ? #ff8a12 : Theme.line;
+    HorizontalLayout { padding-left: 14px; padding-right: 6px; spacing: 10px;
+        Icon { text: G.search; size: 16px; color: input.has-focus ? Theme.accent : Theme.faint; y: (parent.height - self.height) / 2; }
+        Rectangle { horizontal-stretch: 1;
+            if root.text == "": Text { text: root.placeholder; color: Theme.faint; vertical-alignment: center; width: 100%; height: 100%; overflow: elide; }
+            input := TextInput { text <=> root.text; color: Theme.text; selection-background-color: #ff8a1260; vertical-alignment: center;
+                single-line: true; accepted => { root.accepted(self.text); } edited => { root.edited(self.text); } }
+        }
+        if root.text != "": Action { glyph: G.close; icon-size: 14px; width: 28px; height: 28px; y: (parent.height - self.height) / 2;
+            clicked => { root.text = ""; root.cleared(); } }
+    }
+}
+
+component Nav inherits Rectangle {
+    in property <string> label;
+    in property <string> glyph;
+    in property <bool> active;
+    callback clicked;
+    height: 38px; border-radius: 8px;
+    background: active ? Theme.selected : t.has-hover ? Theme.hover : transparent;
+    if root.active: Rectangle { x: 0; y: 10px; width: 3px; height: parent.height - 20px; border-radius: 2px; background: Theme.amber; }
+    HorizontalLayout { padding-left: 14px; padding-right: 12px; spacing: 13px;
+        Icon { text: root.glyph; size: 18px; color: root.active ? Theme.accent : Theme.muted; y: (parent.height - self.height) / 2; }
+        Text { text: root.label; color: root.active ? Theme.accent : Theme.text; font-size: 14px; font-weight: root.active ? 600 : 400; vertical-alignment: center; }
+    }
+    t := TouchArea { mouse-cursor: pointer; clicked => { root.clicked(); } }
+}
+
+// Playlist nella barra laterale (copertina + titolo + numero di brani), come in Limusic.
+component LibraryRow inherits Rectangle {
+    in property <MusicRow> item;
+    callback open;
+    height: 52px; border-radius: 8px;
+    background: t.has-hover ? Theme.hover : transparent;
+    HorizontalLayout { padding: 6px; spacing: 10px;
+        CoverArt { width: 40px; height: 40px; border-radius: 6px; y: (parent.height - self.height) / 2;
+            source: root.item.thumb; has-cover: root.item.has-cover; tint: root.item.tint; kind: root.item.kind; }
+        VerticalLayout { alignment: center; spacing: 2px;
+            Text { text: root.item.title; color: Theme.text; font-size: 13px; font-weight: 600; overflow: elide; }
+            Text { text: root.item.subtitle; color: Theme.muted; font-size: 11px; overflow: elide; }
+        }
+    }
+    t := TouchArea { mouse-cursor: pointer; clicked => { root.open(); } }
+}
+
+// Riga di un brano (elenchi di playlist, album, ricerca).
+component TrackRow inherits Rectangle {
+    in property <MusicRow> item;
+    in property <int> number;
+    in property <bool> current;
+    in property <bool> show-number: true;
+    callback open;
+    callback like;
+    callback add;
+    height: 54px; border-radius: 8px;
+    background: root.current ? Theme.selected : t.has-hover ? Theme.hover : transparent;
+    HorizontalLayout { padding-left: 8px; padding-right: 8px; spacing: 12px;
+        if root.show-number: Text { text: root.number; color: root.current ? Theme.accent : Theme.faint; width: 26px; horizontal-alignment: center; vertical-alignment: center; font-size: 13px; }
+        CoverArt { width: 40px; height: 40px; border-radius: 6px; y: (parent.height - self.height) / 2;
+            source: root.item.thumb; has-cover: root.item.has-cover; tint: root.item.tint; kind: root.item.kind; }
+        VerticalLayout { alignment: center; spacing: 3px; horizontal-stretch: 1;
+            Text { text: root.item.title; color: root.current ? Theme.accent : Theme.text; font-size: 14px; font-weight: 500; overflow: elide; }
+            Text { text: root.item.subtitle; color: Theme.muted; font-size: 12px; overflow: elide; }
+        }
+        Text { text: root.item.duration; color: Theme.muted; width: 44px; vertical-alignment: center; horizontal-alignment: right; font-size: 13px; }
+        Action { glyph: G.heart; heart: true; filled: root.item.liked; width: 32px; height: 32px; icon-size: 16px; y: (parent.height - self.height) / 2; clicked => { root.like(); } }
+        Action { glyph: root.item.kind == "song" ? G.plus : G.right; width: 32px; height: 32px; icon-size: 16px; y: (parent.height - self.height) / 2; clicked => { root.add(); } }
+    }
+    t := TouchArea { width: parent.width - 84px; mouse-cursor: pointer; clicked => { root.open(); } }
+}
+
+// Scheda di album, playlist o artista (rotonda per gli artisti).
+component Card inherits Rectangle {
+    in property <MusicRow> item;
+    callback open;
+    property <bool> round: root.item.kind == "artist";
+    CoverArt { x: 0; y: 0; width: root.width; height: root.width; border-radius: root.round ? root.width / 2 : 10px;
+        source: root.item.cover; has-cover: root.item.has-cover; tint: root.item.tint; kind: root.item.kind;
+        if t.has-hover: Rectangle { background: #00000026; }
+    }
+    if t.has-hover && !root.round: Rectangle { x: root.width - 52px; y: root.width - 52px; width: 42px; height: 42px; border-radius: 21px;
+        background: Theme.amber; border-width: 1px; border-color: Theme.rim;
+        FilledShape { data: Shape.play; tint: Theme.on-amber; size: 20px; x: (parent.width - self.width) / 2 + 1px; y: (parent.height - self.height) / 2; } }
+    Text { x: 0; y: root.width + 8px; width: root.width; text: root.item.title; color: Theme.text; font-size: 14px; font-weight: 600; overflow: elide;
+        horizontal-alignment: root.round ? center : left; }
+    Text { x: 0; y: root.width + 27px; width: root.width; text: root.item.subtitle; color: Theme.muted; font-size: 12px; overflow: elide;
+        horizontal-alignment: root.round ? center : left; }
+    t := TouchArea { mouse-cursor: pointer; clicked => { root.open(); } }
+}
+
+// Griglia di schede che va a capo con la larghezza (al massimo `max-rows` righe se non espansa).
+component CardGrid inherits Rectangle {
+    in property <[MusicRow]> items;
+    in property <bool> expanded: false;
+    callback open(int);
+    property <length> gap: 14px;
+    property <int> cols: max(1, floor((root.width + root.gap) / (160px + root.gap)));
+    property <length> cw: (root.width - (root.cols - 1) * root.gap) / root.cols;
+    property <int> shown: root.expanded ? root.items.length : min(root.items.length, root.cols);
+    property <int> lines: ceil(root.shown / root.cols);
+    height: root.lines * (root.cw + 48px) + max(0, root.lines - 1) * 22px;
+    for item[i] in root.items: Card {
+        item: item; visible: i < root.shown;
+        width: root.cw; height: root.cw + 48px;
+        x: mod(i, root.cols) * (root.cw + root.gap);
+        y: floor(i / root.cols) * (root.cw + 48px + 22px);
+        open => { root.open(i); }
+    }
+}
+
+// Scaffale: titolo + schede o elenco di brani.
+component ShelfView inherits VerticalLayout {
+    in property <ShelfData> shelf;
+    in property <string> current-id;
+    callback open(int);
+    callback like(int);
+    callback add(int);
+    property <bool> expanded: false;
+    spacing: 12px;
+    HorizontalLayout { height: 30px;
+        Text { text: root.shelf.title; color: Theme.text; font-size: 19px; font-weight: 700; vertical-alignment: center; horizontal-stretch: 1; overflow: elide; }
+        if !root.shelf.songs && root.shelf.items.length > 4: Action { text: root.expanded ? "Meno" : "Mostra tutto"; width: 96px; height: 30px; font-size: 13px;
+            clicked => { root.expanded = !root.expanded; } }
+    }
+    if root.shelf.songs: VerticalLayout { spacing: 2px;
+        for item[i] in root.shelf.items: TrackRow { item: item; number: i + 1; show-number: false; current: item.id == root.current-id;
+            open => { root.open(i); } like => { root.like(i); } add => { root.add(i); } }
+    }
+    if !root.shelf.songs: CardGrid { items: root.shelf.items; expanded: root.expanded; open(i) => { root.open(i); } }
+}
+
+component SettingRow inherits HorizontalLayout {
+    in property <string> label;
+    in property <string> hint;
+    // Larghezza disponibile e del controllo a destra: il testo a capo riceve una larghezza fissa,
+    // altrimenti Slint ne stima l'altezza su una riga sola e il pannello si taglia in fondo.
+    in property <length> avail: 400px;
+    in property <length> control: 42px;
+    property <length> text-w: max(90px, root.avail - root.control - 16px);
+    spacing: 16px; min-height: 60px; padding-top: 6px; padding-bottom: 6px;
+    VerticalLayout { alignment: center; spacing: 3px; horizontal-stretch: 1;
+        Text { text: root.label; color: Theme.text; font-size: 14px; font-weight: 600; wrap: word-wrap; width: root.text-w; }
+        if root.hint != "": Text { text: root.hint; color: Theme.muted; font-size: 12px; wrap: word-wrap; width: root.text-w; }
+    }
+    @children
+}
+
+component QueueRow inherits Rectangle {
+    in property <MusicRow> item;
+    in property <bool> current;
+    in property <length> cover-size: 40px;
+    callback play;
+    callback remove;
+    height: root.cover-size + 16px; border-radius: 8px;
+    background: root.current ? Theme.selected : qt.has-hover ? Theme.hover : transparent;
+    HorizontalLayout { padding: 6px; padding-left: 8px; spacing: 10px;
+        CoverArt { width: root.cover-size; height: root.cover-size; border-radius: 6px; y: (parent.height - self.height) / 2;
+            source: root.item.thumb; has-cover: root.item.has-cover; tint: root.item.tint; kind: root.item.kind; }
+        VerticalLayout { alignment: center; spacing: 3px; horizontal-stretch: 1;
+            Text { text: root.item.title; color: root.current ? Theme.accent : Theme.text; font-size: 13px; font-weight: 500; overflow: elide; }
+            Text { text: root.item.subtitle; color: Theme.muted; font-size: 11px; overflow: elide; }
+        }
+        Action { glyph: G.close; icon-size: 13px; width: 26px; height: 26px; y: (parent.height - self.height) / 2; clicked => { root.remove(); } }
+    }
+    qt := TouchArea { width: parent.width - 36px; mouse-cursor: pointer; clicked => { root.play(); } }
+}
+
+// Scheda di testo del pannello di destra, con la sottolineatura ambra quando è attiva.
+component PanelTab inherits Rectangle {
+    in property <string> text;
+    in property <string> badge;
+    in property <bool> active;
+    callback clicked;
+    height: 32px; width: row.preferred-width;
+    row := HorizontalLayout { padding-left: 4px; padding-right: 4px; spacing: 5px;
+        Text { text: root.text; color: root.active ? Theme.text : t.has-hover ? Theme.text : Theme.muted; font-size: 14px; font-weight: root.active ? 700 : 500; vertical-alignment: center; }
+        if root.badge != "": Text { text: root.badge; color: Theme.faint; font-size: 12px; vertical-alignment: center; }
+    }
+    if root.active: Rectangle { y: parent.height - 3px; height: 3px; border-radius: 2px; background: Theme.amber-soft; }
+    t := TouchArea { mouse-cursor: pointer; clicked => { root.clicked(); } }
+}
+
+// Un commento: foto, nome, data, testo a capo, mi piace e risposte. Le risposte sono rientrate.
+component CommentView inherits Rectangle {
+    in property <CommentItem> item;
+    in property <length> text-width: 220px;
+    in property <bool> replying;
+    callback like;
+    callback reply;
+    callback show-replies;
+    property <length> indent: root.item.reply ? 36px : 0px;
+    property <length> avatar-size: root.item.reply ? 22px : 30px;
+    height: body.preferred-height;
+    border-radius: 10px;
+    background: root.replying ? Theme.selected : transparent;
+    body := HorizontalLayout { padding: 6px; padding-left: 6px + root.indent; spacing: 10px; alignment: start;
+        VerticalLayout { alignment: start; padding-top: 2px;
+            Avatar { width: root.avatar-size; height: root.avatar-size; source: root.item.avatar; has-image: root.item.has-avatar; name: root.item.initial; } }
+        VerticalLayout { spacing: 4px; alignment: start;
+            if root.item.pinned: HorizontalLayout { spacing: 4px; alignment: start;
+                Icon { text: G.pin; size: 11px; color: Theme.faint; y: (parent.height - self.height) / 2; }
+                Text { text: "Fissato in alto"; color: Theme.faint; font-size: 11px; vertical-alignment: center; } }
+            HorizontalLayout { spacing: 6px; alignment: start;
+                Rectangle { width: name.preferred-width + (root.item.creator ? 12px : 0px); height: 18px;
+                    border-radius: 9px; background: root.item.creator ? Theme.hover : transparent;
+                    name := Text { x: root.item.creator ? 6px : 0px; text: root.item.author; color: root.item.own ? Theme.accent : Theme.text; font-size: 13px; font-weight: 700;
+                        vertical-alignment: center; height: 100%; overflow: elide; } }
+                Text { text: root.item.published; color: Theme.faint; font-size: 11px; vertical-alignment: center; overflow: elide; }
+            }
+            Text { text: root.item.text; color: Theme.text; font-size: 13px; wrap: word-wrap; width: root.text-width - root.indent - root.avatar-size + 30px; }
+            HorizontalLayout { spacing: 2px; alignment: start; height: 26px;
+                Rectangle { width: likes.preferred-width; border-radius: 13px; background: lt.has-hover && root.item.can-like ? Theme.hover : transparent;
+                    likes := HorizontalLayout { padding-left: 6px; padding-right: 8px; spacing: 5px;
+                        Icon { text: G.thumb-up; size: 13px; color: root.item.liked ? Theme.accent : Theme.muted; y: (parent.height - self.height) / 2; }
+                        if root.item.likes != "": Text { text: root.item.likes; color: root.item.liked ? Theme.accent : Theme.muted; font-size: 12px; vertical-alignment: center; } }
+                    lt := TouchArea { enabled: root.item.can-like; mouse-cursor: root.item.can-like ? pointer : default; clicked => { root.like(); } } }
+                if root.item.hearted: Rectangle { width: 24px;
+                    FilledShape { data: Shape.heart; tint: #ff5a3c; size: 13px; x: (parent.width - self.width) / 2; y: (parent.height - self.height) / 2; } }
+                if root.item.can-reply: Rectangle { width: rl.preferred-width; border-radius: 13px; background: rt.has-hover ? Theme.hover : transparent;
+                    rl := HorizontalLayout { padding-left: 8px; padding-right: 8px;
+                        Text { text: "Rispondi"; color: Theme.muted; font-size: 12px; font-weight: 600; vertical-alignment: center; } }
+                    rt := TouchArea { mouse-cursor: pointer; clicked => { root.reply(); } } }
+            }
+            if root.item.replies != "": Rectangle { height: 26px; width: rr.preferred-width; border-radius: 13px; background: st.has-hover ? Theme.selected : transparent;
+                rr := HorizontalLayout { padding-left: 6px; padding-right: 10px; spacing: 6px;
+                    Icon { text: G.down; size: 14px; color: Theme.accent; y: (parent.height - self.height) / 2; }
+                    Text { text: root.item.replies; color: Theme.accent; font-size: 12px; font-weight: 700; vertical-alignment: center; } }
+                st := TouchArea { mouse-cursor: pointer; clicked => { root.show-replies(); } } }
+        }
+    }
+}
+
+// Vista "In riproduzione" come in Limusic: copertina grande al centro, sfondo tinto con il suo
+// colore, coda a destra. Clic sulla copertina = play/pausa, rotella = volume.
+component NowPlaying inherits Rectangle {
+    in property <image> cover;
+    in property <bool> has-cover;
+    in property <color> tint;
+    in property <string> title;
+    in property <string> artist;
+    in property <string> album;
+    in property <bool> playing;
+    in property <bool> liked;
+    in property <bool> has-track;
+    in property <string> source;
+    in property <[MusicRow]> queue;
+    in property <int> queue-index;
+    callback close;
+    callback toggle;
+    callback like;
+    callback volume-step(float);
+    callback play-queue(int);
+    callback remove-queue(int);
+    background: Theme.bg;
+    Rectangle { background: @linear-gradient(180deg, root.tint.with-alpha(Theme.dark ? 0.30 : 0.22) 0%, root.tint.with-alpha(0) 85%); }
+    TouchArea { }
+    HorizontalLayout { padding: 20px; padding-left: 28px; spacing: 24px;
+        stage := Rectangle { horizontal-stretch: 1;
+            property <length> art: clamp(min(self.width - 60px, self.height - 170px), 140px, 640px);
+            property <length> art-x: (self.width - self.art) / 2;
+            property <length> art-y: max(52px, (self.height - self.art - 118px) / 2 + 20px);
+            Rectangle { x: (parent.width - self.width) / 2; y: parent.art-y + parent.art * 0.1; width: parent.art * 1.2; height: parent.art * 0.95; border-radius: self.width / 2;
+                background: @radial-gradient(circle, root.tint.with-alpha(Theme.dark ? 0.38 : 0.30) 0%, root.tint.with-alpha(0) 70%); }
+            HorizontalLayout { y: 0; height: 40px;
+                Action { glyph: G.down; width: 40px; height: 40px; clicked => { root.close(); } }
+                Text { text: "ORA IN ASCOLTO"; color: Theme.accent; font-size: 12px; letter-spacing: 2px; horizontal-alignment: center; vertical-alignment: center; horizontal-stretch: 1; }
+                Rectangle { width: 40px; }
+            }
+            Rectangle { x: parent.art-x; y: parent.art-y; width: parent.art; height: parent.art; border-radius: 22px; background: Theme.card;
+                drop-shadow-blur: 48px; drop-shadow-offset-y: 14px; drop-shadow-color: root.tint.with-alpha(0.45); }
+            Rectangle { x: parent.art-x; y: parent.art-y; width: parent.art; height: parent.art; border-radius: 22px; clip: true; background: Theme.card;
+CoverArt { width: 100%; height: 100%; source: root.cover; has-cover: root.has-track && root.has-cover; tint: root.tint; kind: "song"; }
+                if root.has-track && (art-touch.has-hover || !root.playing): Rectangle {
+                    background: art-touch.has-hover ? #00000033 : transparent;
+                    Rectangle { width: 76px; height: 76px; border-radius: 38px; background: #000000a0; x: (parent.width - self.width) / 2; y: (parent.height - self.height) / 2;
+                        FilledShape { data: root.playing ? Shape.pause : Shape.play; tint: #ffffff; size: 34px;
+                            x: (parent.width - self.width) / 2 + (root.playing ? 0px : 2px); y: (parent.height - self.height) / 2; } }
+                }
+                art-touch := TouchArea { mouse-cursor: pointer;
+                    clicked => { root.toggle(); }
+                    scroll-event(e) => { root.volume-step(e.delta-y > 0 ? 5 : -5); return accept; }
+                }
+            }
+            HorizontalLayout { x: parent.art-x; y: parent.art-y + parent.art + 20px; width: parent.art; height: 92px; spacing: 10px;
+                VerticalLayout { alignment: start; spacing: 5px;
+                    Text { text: root.has-track ? root.title : "Nessun brano"; color: Theme.text; font-size: 24px; font-weight: 700; wrap: word-wrap; overflow: elide; max-height: 62px; }
+                    Text { text: root.artist; color: Theme.dark ? #d8d2cc : #4a423c; font-size: 14px; overflow: elide; }
+                    if root.album != "": Text { text: root.album; color: Theme.muted; font-size: 13px; overflow: elide; }
+                }
+                if root.has-track: Action { glyph: G.heart; heart: true; filled: root.liked; width: 42px; height: 42px; icon-size: 21px; clicked => { root.like(); } }
+            }
+        }
+        Rectangle { width: 330px; border-radius: 16px; background: Theme.dark ? #ffffff08 : #ffffffb0; border-width: 1px; border-color: Theme.line;
+            VerticalLayout { padding: 14px; spacing: 10px;
+                HorizontalLayout { height: 30px; spacing: 8px;
+                    Icon { text: G.queue; size: 18px; color: Theme.accent; y: (parent.height - self.height) / 2; }
+                    Text { text: "In coda"; color: Theme.text; font-size: 15px; font-weight: 600; vertical-alignment: center; horizontal-stretch: 1; }
+                    Text { text: root.queue.length + " brani"; color: Theme.muted; font-size: 12px; vertical-alignment: center; }
+                }
+                if root.source != "": Text { text: "Stai ascoltando da " + root.source; color: Theme.muted; font-size: 12px; overflow: elide; }
+                ScrollView { vertical-stretch: 1;
+                    VerticalLayout { spacing: 2px; padding-right: 12px;
+                        for row[index] in root.queue: QueueRow { item: row; current: index == root.queue-index; cover-size: 42px;
+                            play => { root.play-queue(index); } remove => { root.remove-queue(index); } }
+                        if root.queue.length == 0: Text { text: "La coda è vuota."; color: Theme.faint; height: 60px; }
+                    }
+                }
+            }
+        }
+    }
+}
+
+export component AppWindow inherits Window {
+    init => { root.apply-theme(root.dark-theme); }
+    title: "AmbraMusic " + root.version;
+    preferred-width: 1180px; preferred-height: 700px; min-width: 860px; min-height: 480px;
+    background: Theme.bg; default-font-family: "Segoe UI"; default-font-size: 14px;
+    icon: @image-url("../assets/icon.png");
+    in property <image> app-icon: @image-url("../assets/icon-96.png");
+    in property <string> version: "0.5.5";
+    // Contenuto della pagina
+    in property <[MusicRow]> rows;
+    in property <[ShelfData]> shelves;
+    in property <bool> has-lead: false;
+    in property <MusicRow> lead-item;
+    in property <int> lead-shelf: 0;
+    in property <ShelfData> lead-songs;
+    in property <string> heading: "Buonasera";
+    in property <string> subheading;
+    in property <bool> hero-visible: false;
+    in property <string> hero-label;
+    in property <string> hero-title;
+    in property <string> hero-subtitle;
+    in property <string> hero-detail;
+    in property <image> hero-cover;
+    in property <bool> hero-has-cover: false;
+    in property <color> hero-tint: #8a6a55;
+    in property <string> hero-kind: "playlist";
+    in property <bool> hero-round: false;
+    in property <string> filter: "all";
+    in property <bool> can-go-back: false;
+    in property <bool> has-more;
+    // Ricerca e suggerimenti
+    in-out property <string> query;
+    in-out property <bool> suggest-open: false;
+    in property <[string]> suggest-queries;
+    in property <[MusicRow]> suggest-items;
+    // Barra laterale e coda
+    in property <[MusicRow]> library;
+    in property <[MusicRow]> queue;
+    in property <int> queue-index: -1;
+    in property <string> queue-source;
+    in-out property <bool> queue-visible: true;
+    /// Pannello di destra: 0 coda, 1 playlist, 2 commenti.
+    in-out property <int> right-tab: 0;
+    // Commenti del brano in ascolto
+    in property <[CommentItem]> comments;
+    /// 0 caricamento, 1 elenco, 2 nessun commento, 3 commenti disattivati, 4 errore.
+    in property <int> comments-state: 0;
+    in property <string> comments-count;
+    in property <bool> comments-newest: false;
+    in property <bool> comments-has-more: false;
+    in property <bool> comments-can-write: false;
+    in property <bool> comments-sending: false;
+    in-out property <int> comments-reply-to: -1;
+    in-out property <bool> comments-enabled: true;
+    callback comments-open();
+    callback panel-tab(int);
+    callback comments-sort(bool);
+    callback comments-more();
+    callback comment-like(int);
+    callback comment-replies(int);
+    callback comment-send(string, int);
+    // Brano attuale
+    in property <string> status: "Pronto";
+    in property <string> account: "Accedi";
+    in property <image> account-avatar;
+    in property <string> account-initial;
+    in property <bool> has-avatar: false;
+    in property <string> track-id;
+    in property <string> track-title: "Nessun brano";
+    in property <string> track-artist;
+    in property <string> track-album;
+    in property <image> track-cover;
+    in property <bool> track-has-cover: false;
+    in property <image> np-cover;
+    in property <bool> np-has-cover: false;
+    in property <color> np-tint: #ff8a12;
+    in-out property <bool> np-visible: false;
+    in property <string> elapsed: "0:00";
+    in property <string> length: "0:00";
+    in property <float> duration: 1;
+    in property <float> position;
+    in property <bool> playing;
+    in property <bool> busy;
+    in property <bool> track-liked;
+    in-out property <bool> shuffle: false;
+    in-out property <int> repeat: 0;
+    in-out property <float> volume: 70;
+    property <float> volume-before-mute: 70;
+    // Impostazioni
+    in-out property <int> settings-tab: 0;
+    in-out property <bool> discord-enabled: true;
+    in-out property <bool> close-to-tray: true;
+    in-out property <bool> playlists-right: false;
+    in-out property <bool> open-player: false;
+    in-out property <bool> autoplay: true;
+    in-out property <bool> advanced-visible: false;
+    in-out property <bool> dark-theme: true;
+    in property <bool> signed-in: false;
+    in property <bool> session-saved: false;
+    in property <bool> google-login-available: true;
+    in property <bool> login-pending: false;
+    in property <bool> demo: false;
+    in-out property <int> page: 0;
+    // Compatibilità con l'anteprima "--account-preview"
+    in-out property <bool> account-visible: false;
+    changed account-visible => { if self.account-visible { root.open-settings(0); self.account-visible = false; } }
+
+    callback search(string);
+    callback suggest(string);
+    callback suggest-pick(int);
+    callback search-filter(string);
+    callback navigate(int);
+    callback back;
+    callback activate(int);
+    callback open-shelf(int, int);
+    callback like-shelf(int, int);
+    callback add-shelf(int, int);
+    callback open-library(int);
+    callback play-all(bool);
+    callback enqueue(int);
+    callback like-row(int);
+    callback play-queue(int);
+    callback remove-queue(int);
+    callback toggle;
+    callback previous;
+    callback next;
+    callback seek(float);
+    callback change-volume(float);
+    callback set-shuffle(bool);
+    callback set-repeat(int);
+    callback discord(bool);
+    callback setting(string, bool);
+    callback clear-cache;
+    callback login(string);
+    callback google-login(bool);
+    callback cancel-login;
+    callback logout;
+    callback browser;
+    callback open-url(string);
+    callback like-current;
+    callback load-more;
+    callback theme-changed(bool);
+
+    public function apply-theme(dark: bool) {
+        root.dark-theme = dark;
+        Theme.dark = dark;
+        Palette.color-scheme = dark ? ColorScheme.dark : ColorScheme.light;
+    }
+    function set-theme(dark: bool) {
+        root.apply-theme(dark);
+        root.theme-changed(dark);
+    }
+    function volume-step(d: float) {
+        root.volume = clamp(root.volume + d, 0, 100);
+        root.change-volume(root.volume);
+    }
+    function go(p: int) {
+        root.np-visible = false;
+        root.suggest-open = false;
+        root.page = p;
+        root.navigate(p);
+    }
+    function open-settings(tab: int) {
+        root.settings-tab = tab;
+        root.go(5);
+    }
+    function run-search(q: string) {
+        root.query = q;
+        root.suggest-open = false;
+        root.np-visible = false;
+        root.page = 1;
+        root.search(q);
+    }
+
+    property <length> side-w: 230px;
+    property <length> player-h: 88px;
+    property <bool> show-right: root.queue-visible && root.page != 5;
+    property <bool> playlists-in-side: root.signed-in && !(root.playlists-right && root.show-right);
+
+    VerticalLayout {
+        spacing: 0px;
+        HorizontalLayout { spacing: 0px; vertical-stretch: 1;
+            // ---- Barra laterale ----
+            Rectangle { width: root.side-w; background: Theme.side;
+                Rectangle { x: parent.width - 1px; width: 1px; background: Theme.line; }
+                VerticalLayout { padding: 14px; padding-top: 16px; spacing: 4px;
+                    HorizontalLayout { height: 44px; spacing: 10px; padding-left: 6px;
+                        Image { source: root.app-icon; width: 30px; height: 30px; image-fit: contain; y: (parent.height - self.height) / 2; }
+                        Text { text: "AmbraMusic"; color: Theme.text; font-size: 18px; font-weight: 700; vertical-alignment: center; horizontal-stretch: 1; }
+                        Action { glyph: root.dark-theme ? G.moon : G.sun; width: 34px; height: 34px; icon-size: 17px; y: (parent.height - self.height) / 2;
+                            clicked => { root.set-theme(!root.dark-theme); } }
+                    }
+                    Rectangle { height: 8px; }
+                    Nav { label: "Home"; glyph: G.home; active: root.page == 0 && !root.np-visible; clicked => { root.go(0); } }
+                    Nav { label: "Cerca"; glyph: G.search; active: root.page == 1 && !root.np-visible; clicked => { root.go(1); search-box.focus-input(); } }
+                    Nav { label: "Libreria"; glyph: G.library; active: root.page == 2 && !root.np-visible; clicked => { root.go(2); } }
+                    Nav { label: "I tuoi mi piace"; glyph: G.heart; active: root.page == 3 && !root.np-visible; clicked => { root.go(3); } }
+                    Nav { label: "Preferiti locali"; glyph: G.star; active: root.page == 4 && !root.np-visible; clicked => { root.go(4); } }
+                    Nav { label: "Impostazioni"; glyph: G.settings; active: root.page == 5 && !root.np-visible; clicked => { root.open-settings(root.settings-tab); } }
+                    Rectangle { height: 8px; }
+                    Rectangle { height: 1px; background: Theme.line; }
+                    Rectangle { height: 6px; }
+                    if root.playlists-in-side: Text { text: "PLAYLIST"; color: Theme.faint; font-size: 11px; letter-spacing: 1.5px; height: 24px; vertical-alignment: center; }
+                    if root.playlists-in-side: ScrollView { vertical-stretch: 1;
+                        VerticalLayout { spacing: 1px; padding-right: 10px;
+                            for p[i] in root.library: LibraryRow { item: p; open => { root.np-visible = false; root.open-library(i); } }
+                            if root.library.length == 0: Text { text: "Caricamento delle playlist…"; color: Theme.faint; font-size: 12px; height: 40px; }
+                        }
+                    }
+                    if !root.signed-in: Rectangle { vertical-stretch: 1; }
+                    if !root.signed-in && !root.demo: Rectangle { height: 118px; border-radius: 12px; background: Theme.card; border-width: 1px; border-color: Theme.line;
+                        VerticalLayout { padding: 12px; spacing: 8px;
+                            Text { text: "Accedi per vedere le tue playlist e i brani che ti piacciono."; color: Theme.muted; font-size: 13px; wrap: word-wrap; }
+                            Action { text: "Accedi con Google"; accent: true; height: 34px; font-size: 13px; clicked => { root.open-settings(0); } }
+                        }
+                    }
+                    if root.demo: Rectangle { height: 70px; border-radius: 12px; background: Theme.card;
+                        VerticalLayout { padding: 12px; spacing: 4px;
+                            Text { text: "MODALITÀ DEMO"; color: Theme.accent; font-size: 12px; font-weight: 700; }
+                            Text { text: "Dati di esempio, nessun account."; color: Theme.muted; font-size: 12px; wrap: word-wrap; }
+                        }
+                    }
+                    if !root.playlists-in-side && root.signed-in: Rectangle { vertical-stretch: 1; }
+                }
+            }
+            // ---- Contenuto ----
+            VerticalLayout { horizontal-stretch: 1; spacing: 0px;
+                Rectangle { height: 60px; background: Theme.bg;
+                    HorizontalLayout { padding-left: 20px; padding-right: 20px; padding-top: 12px; padding-bottom: 12px; spacing: 10px;
+                        Action { glyph: G.left; width: 40px; height: 40px; enabled: root.can-go-back; clicked => { root.np-visible = false; root.back(); } }
+                        search-box := SearchField { text <=> root.query; placeholder: "Cosa vuoi ascoltare?"; max-width: 600px; horizontal-stretch: 1;
+                            accepted(q) => { root.run-search(q); }
+                            edited(t) => { root.suggest-open = t != ""; root.suggest(t); }
+                            cleared => { root.suggest-open = false; root.suggest(""); } }
+                        Rectangle { horizontal-stretch: 0.01; }
+                        if root.signed-in: AccountChip { avatar: root.account-avatar; has-avatar: root.has-avatar; name: root.account; initial: root.account-initial; clicked => { root.open-settings(0); } }
+                        if !root.signed-in: Pill { glyph: G.login; text: "Accedi"; accent: true; clicked => { root.open-settings(0); } }
+                    }
+                }
+                Rectangle { vertical-stretch: 1;
+                    if root.page != 5: ScrollView {
+                        content := VerticalLayout { padding: 18px; padding-top: 6px; padding-right: 24px; spacing: 18px; alignment: start;
+                            if root.hero-visible: Rectangle { height: 186px;
+                                Rectangle { x: -26px; y: -6px; width: parent.width + 66px; height: parent.height + 30px;
+                                    background: @linear-gradient(180deg, #ff8a1226 0%, #ff8a1200 100%); }
+                                HorizontalLayout { spacing: 26px; padding-top: 10px;
+                                    CoverArt { width: 160px; height: 160px; border-radius: root.hero-round ? 80px : 12px;
+                                        source: root.hero-cover; has-cover: root.hero-has-cover; tint: root.hero-tint; kind: root.hero-kind; }
+                                    VerticalLayout { alignment: end; spacing: 6px; padding-bottom: 4px;
+                                        Text { text: root.hero-label; color: Theme.muted; font-size: 12px; font-weight: 600; letter-spacing: 1.5px; overflow: elide; }
+                                        Text { text: root.hero-title; color: Theme.text; font-size: 28px; font-weight: 800; wrap: word-wrap; overflow: elide; max-height: 92px; }
+                                        Text { text: root.hero-subtitle + (root.hero-subtitle != "" && root.hero-detail != "" ? "  •  " : "") + root.hero-detail; color: Theme.muted; font-size: 14px; overflow: elide; }
+                                        Rectangle { height: 6px; }
+                                        HorizontalLayout { spacing: 10px; alignment: start;
+                                            if root.rows.length > 0: Pill { glyph: G.play; text: "Riproduci"; accent: true; clicked => { root.play-all(false); } }
+                                            if root.rows.length > 1: Pill { glyph: G.shuffle; text: "Riproduzione casuale"; clicked => { root.play-all(true); } }
+                                        }
+                                    }
+                                }
+                            }
+                            if !root.hero-visible: VerticalLayout { spacing: 6px; padding-top: 10px;
+                                Text { text: root.heading; color: Theme.text; font-size: 26px; font-weight: 800; wrap: word-wrap; }
+                                if root.subheading != "": Text { text: root.subheading; color: Theme.muted; font-size: 14px; wrap: word-wrap; }
+                            }
+                            if root.page == 1 && root.query != "": HorizontalLayout { spacing: 8px; alignment: start;
+                                Chip { text: "Tutti"; active: root.filter == "all"; clicked => { root.search-filter("all"); } }
+                                Chip { text: "Brani"; active: root.filter == "songs"; clicked => { root.search-filter("songs"); } }
+                                Chip { text: "Video"; active: root.filter == "videos"; clicked => { root.search-filter("videos"); } }
+                                Chip { text: "Album"; active: root.filter == "albums"; clicked => { root.search-filter("albums"); } }
+                                Chip { text: "Artisti"; active: root.filter == "artists"; clicked => { root.search-filter("artists"); } }
+                                Chip { text: "Playlist"; active: root.filter == "playlists"; clicked => { root.search-filter("playlists"); } }
+                            }
+                            // Ricerca "Tutti": risultato principale accanto ai brani, come in Limusic.
+                            if root.has-lead: HorizontalLayout { spacing: 28px;
+                                VerticalLayout { width: 240px; spacing: 10px; alignment: start;
+                                    Text { text: "In evidenza"; color: Theme.text; font-size: 19px; font-weight: 700; height: 30px; vertical-alignment: center; }
+                                    Rectangle { height: 250px; border-radius: 12px; background: lead-t.has-hover ? Theme.card-hover : Theme.card; border-width: 1px; border-color: Theme.line;
+                                        VerticalLayout { padding: 18px; spacing: 10px;
+                                            CoverArt { width: 140px; height: 140px; border-radius: root.lead-item.kind == "artist" ? 70px : 10px;
+                                                source: root.lead-item.cover; has-cover: root.lead-item.has-cover; tint: root.lead-item.tint; kind: root.lead-item.kind; }
+                                            Text { text: root.lead-item.title; color: Theme.text; font-size: 22px; font-weight: 800; overflow: elide; }
+                                            Text { text: root.lead-item.subtitle; color: Theme.muted; font-size: 13px; overflow: elide; }
+                                        }
+                                        lead-t := TouchArea { mouse-cursor: pointer; clicked => { root.open-shelf(root.lead-shelf, 0); } }
+                                    }
+                                }
+                                ShelfView { horizontal-stretch: 1; shelf: root.lead-songs; current-id: root.track-id;
+                                    open(i) => { root.open-shelf(root.lead-songs.index, i); }
+                                    like(i) => { root.like-shelf(root.lead-songs.index, i); }
+                                    add(i) => { root.add-shelf(root.lead-songs.index, i); } }
+                            }
+                            for shelf in root.shelves: ShelfView { shelf: shelf; current-id: root.track-id;
+                                open(i) => { root.open-shelf(shelf.index, i); }
+                                like(i) => { root.like-shelf(shelf.index, i); }
+                                add(i) => { root.add-shelf(shelf.index, i); } }
+                            if root.rows.length > 0: VerticalLayout { spacing: 2px;
+                                for row[index] in root.rows: TrackRow { item: row; number: index + 1; current: row.id == root.track-id;
+                                    open => { root.activate(index); } like => { root.like-row(index); } add => { root.enqueue(index); } }
+                            }
+                            if root.has-more: Action { text: "Carica altri brani"; clicked => { root.load-more(); } }
+                            if root.rows.length == 0 && root.shelves.length == 0 && !root.has-lead && !root.hero-visible: Text {
+                                text: root.busy ? "Caricamento…" : root.page == 1 && root.query == "" ? "Inizia a scrivere nel campo qui sopra." : "Qui non c'è ancora niente.";
+                                color: Theme.muted; height: 80px; vertical-alignment: center; }
+                        }
+                    }
+                    if root.page == 5: settings-view := Rectangle {
+                        // Finestra stretta: colonna delle schede e margini più piccoli, più spazio al riquadro.
+                        HorizontalLayout { padding: settings-view.width < 760px ? 16px : 26px; padding-top: 6px; spacing: settings-view.width < 760px ? 14px : 26px;
+                            VerticalLayout { width: settings-view.width < 760px ? 142px : 170px; spacing: 4px; alignment: start;
+                                Text { text: "Impostazioni"; color: Theme.text; font-size: 22px; font-weight: 800; height: 42px; vertical-alignment: center; }
+                                Nav { label: "Account"; glyph: G.account; active: root.settings-tab == 0; clicked => { root.settings-tab = 0; } }
+                                Nav { label: "Generale"; glyph: G.settings; active: root.settings-tab == 1; clicked => { root.settings-tab = 1; } }
+                                Nav { label: "Aspetto"; glyph: G.sun; active: root.settings-tab == 2; clicked => { root.settings-tab = 2; } }
+                                Nav { label: "Riproduzione"; glyph: G.play; active: root.settings-tab == 3; clicked => { root.settings-tab = 3; } }
+                                Nav { label: "Archivio e cache"; glyph: G.disc; active: root.settings-tab == 4; clicked => { root.settings-tab = 4; } }
+                                Nav { label: "Aiuto e info"; glyph: G.music; active: root.settings-tab == 5; clicked => { root.settings-tab = 5; } }
+                            }
+                            Rectangle { horizontal-stretch: 1; border-radius: 16px; background: Theme.card; border-width: 1px; border-color: Theme.line;
+                                settings-scroll := ScrollView {
+                                    VerticalLayout { width: settings-scroll.visible-width; padding: 16px; padding-right: 20px; spacing: 12px; alignment: start;
+                                        if root.settings-tab == 0: VerticalLayout { spacing: 12px;
+                                            Text { text: "Account"; color: Theme.text; font-size: 20px; font-weight: 700; }
+                                            Text { text: "Il tuo account YouTube Music."; color: Theme.muted; font-size: 13px; }
+                                            if root.signed-in: Rectangle { height: 62px; border-radius: 12px; background: Theme.selected;
+                                                HorizontalLayout { padding-left: 14px; padding-right: 14px; spacing: 12px;
+                                                    Avatar { width: 40px; height: 40px; source: root.account-avatar; has-image: root.has-avatar; name: root.account-initial; y: (parent.height - self.height) / 2; }
+                                                    VerticalLayout { alignment: center; spacing: 3px;
+                                                        Text { text: root.account; color: Theme.text; font-size: 14px; font-weight: 600; overflow: elide; }
+                                                        Text { text: root.session-saved ? "Accesso salvato su questo PC: resta attivo al prossimo avvio." : "Accesso attivo solo per questa sessione."; color: Theme.muted; font-size: 12px; overflow: elide; }
+                                                    }
+                                                }
+                                            }
+                                            if root.signed-in && settings-scroll.visible-width >= 430px: HorizontalLayout { spacing: 10px; alignment: start;
+                                                if root.google-login-available: Pill { glyph: G.refresh; text: "Cambia account Google"; clicked => { root.google-login(true); } }
+                                                Pill { glyph: G.login; text: "Esci"; clicked => { root.logout(); } }
+                                            }
+                                            // Riquadro stretto: i due pulsanti uno sotto l'altro.
+                                            if root.signed-in && root.google-login-available && settings-scroll.visible-width < 430px: HorizontalLayout { alignment: start;
+                                                Pill { glyph: G.refresh; text: "Cambia account Google"; clicked => { root.google-login(true); } } }
+                                            if root.signed-in && settings-scroll.visible-width < 430px: HorizontalLayout { alignment: start;
+                                                Pill { glyph: G.login; text: "Esci"; clicked => { root.logout(); } } }
+                                            if !root.signed-in && root.google-login-available && !root.login-pending: HorizontalLayout { alignment: start;
+                                                Pill { glyph: G.login; text: "Accedi con Google"; accent: true; clicked => { root.google-login(false); } } }
+                                            if root.login-pending: HorizontalLayout { spacing: 10px; height: 40px;
+                                                Spinner { width: 22px; height: 22px; y: (parent.height - self.height) / 2; }
+                                                Text { text: "Completa l'accesso nella finestra di Google…"; color: Theme.text; vertical-alignment: center; horizontal-stretch: 1; }
+                                                Action { text: "Annulla accesso"; width: 130px; clicked => { root.cancel-login(); } }
+                                            }
+                                            if !root.signed-in: Text { text: root.google-login-available
+                                                    ? "Si apre la pagina ufficiale di Google in una finestra dell'app. Password e codici li inserisci solo lì: AmbraMusic riceve unicamente la sessione di YouTube Music, che resta salvata su questo PC cifrata con il tuo utente Windows."
+                                                    : "Su questo sistema il login integrato non è disponibile: usa il Cookie header.";
+                                                color: Theme.muted; wrap: word-wrap; width: max(1px, settings-scroll.visible-width - 36px); font-size: 13px; }
+                                            if !root.signed-in: HorizontalLayout { alignment: start;
+                                                Pill { glyph: root.advanced-visible || !root.google-login-available ? G.down : G.right; text: "Avanzate: Cookie header";
+                                                    clicked => { root.advanced-visible = !root.advanced-visible; } } }
+                                            if !root.signed-in && (root.advanced-visible || !root.google-login-available): VerticalLayout { spacing: 8px;
+                                                Text { text: "Da music.youtube.com (F12 → Rete) copia il valore dell'intestazione Cookie di una richiesta youtubei/v1. Deve contenere SAPISID."; color: Theme.faint; wrap: word-wrap; width: max(1px, settings-scroll.visible-width - 36px); font-size: 12px; }
+                                                cookie := TextEdit { height: 74px; text: ""; }
+                                                HorizontalLayout { spacing: 10px; alignment: start;
+                                                    Pill { glyph: G.login; text: "Collega con il cookie"; clicked => { root.login(cookie.text); cookie.text = ""; } }
+                                                    Pill { glyph: G.external; text: "Apri YouTube Music"; clicked => { root.browser(); } }
+                                                }
+                                            }
+                                        }
+                                        if root.settings-tab == 1: VerticalLayout { spacing: 6px;
+                                            Text { text: "Generale"; color: Theme.text; font-size: 20px; font-weight: 700; }
+                                            Text { text: "Sistema e integrazioni."; color: Theme.muted; font-size: 13px; }
+                                            SettingRow { avail: max(1px, settings-scroll.visible-width - 36px); label: "Chiudendo la finestra, resta nell'area di notifica"; hint: "Il pulsante X della finestra la nasconde: la musica continua e AmbraMusic resta nell'area di notifica. Per uscire usa Esci dal menu dell'icona.";
+                                                Toggle { checked <=> root.close-to-tray; y: (parent.height - self.height) / 2; toggled(on) => { root.setting("close_to_tray", on); } } }
+                                            SettingRow { avail: max(1px, settings-scroll.visible-width - 36px); label: "Commenti dei brani"; hint: "Mostra la scheda Commenti nel pannello di destra. Spenta, non si scarica nessun commento.";
+                                                Toggle { checked <=> root.comments-enabled; y: (parent.height - self.height) / 2; toggled(on) => { root.setting("comments", on); } } }
+                                            SettingRow { avail: max(1px, settings-scroll.visible-width - 36px); label: "Stato su Discord"; hint: "Il brano che stai ascoltando compare sul tuo profilo Discord.";
+                                                Toggle { checked <=> root.discord-enabled; y: (parent.height - self.height) / 2; toggled(on) => { root.discord(on); } } }
+                                        }
+                                        if root.settings-tab == 2: VerticalLayout { spacing: 6px;
+                                            Text { text: "Aspetto"; color: Theme.text; font-size: 20px; font-weight: 700; }
+                                            Text { text: "Colori e disposizione."; color: Theme.muted; font-size: 13px; }
+                                            SettingRow { avail: max(1px, settings-scroll.visible-width - 36px); control: settings-scroll.visible-width < 430px ? 150px : 220px; label: "Chiaro o scuro"; hint: "";
+                                                Segmented { width: settings-scroll.visible-width < 430px ? 150px : 220px; left: "Scuro"; right: "Chiaro"; right-on: !root.dark-theme; y: (parent.height - self.height) / 2; picked(light) => { root.set-theme(!light); } } }
+                                            SettingRow { avail: max(1px, settings-scroll.visible-width - 36px); control: settings-scroll.visible-width < 430px ? 150px : 220px; label: "Posizione delle playlist"; hint: "Nella barra laterale a sinistra oppure nel pannello di destra, accanto alla coda.";
+                                                Segmented { width: settings-scroll.visible-width < 430px ? 150px : 220px; left: "Sinistra"; right: "Destra"; right-on: root.playlists-right; y: (parent.height - self.height) / 2;
+                                                    picked(r) => { root.playlists-right = r; root.setting("playlists_right", r); } } }
+                                            SettingRow { avail: max(1px, settings-scroll.visible-width - 36px); label: "Mostra la copertina grande all'avvio di un brano"; hint: "Appena parte un brano si apre la vista Ora in ascolto.";
+                                                Toggle { checked <=> root.open-player; y: (parent.height - self.height) / 2; toggled(on) => { root.setting("open_player", on); } } }
+                                        }
+                                        if root.settings-tab == 3: VerticalLayout { spacing: 6px;
+                                            Text { text: "Riproduzione"; color: Theme.text; font-size: 20px; font-weight: 700; }
+                                            Text { text: "Comportamento della coda."; color: Theme.muted; font-size: 13px; }
+                                            SettingRow { avail: max(1px, settings-scroll.visible-width - 36px); label: "Continua con brani simili"; hint: "Quando la coda finisce, AmbraMusic prosegue con brani affini. Se avvii un singolo brano, la coda si riempie con la sua radio.";
+                                                Toggle { checked <=> root.autoplay; y: (parent.height - self.height) / 2; toggled(on) => { root.setting("autoplay", on); } } }
+                                        }
+                                        if root.settings-tab == 4: VerticalLayout { spacing: 6px;
+                                            Text { text: "Archivio e cache"; color: Theme.text; font-size: 20px; font-weight: 700; }
+                                            Text { text: "File in cache su questo PC."; color: Theme.muted; font-size: 13px; }
+                                            SettingRow { avail: max(1px, settings-scroll.visible-width - 36px); control: 150px; label: "Copertine in cache"; hint: "Le miniature e le copertine grandi vengono riscaricate quando servono.";
+                                                Pill { glyph: G.trash; text: "Svuota cache"; y: (parent.height - self.height) / 2; clicked => { root.clear-cache(); } } }
+                                        }
+                                        if root.settings-tab == 5: VerticalLayout { width: max(1px, settings-scroll.visible-width - 36px); spacing: 10px; alignment: start;
+                                            Rectangle { height: 12px; }
+                                            // Icona al centro, con il bagliore ambra dell'app.
+                                            Rectangle { height: 88px;
+                                                Rectangle { width: 88px; height: 88px; x: (parent.width - self.width) / 2; border-radius: 75px;
+                                                    background: @radial-gradient(circle, #ff8a1240 0%, #ff8a1200 70%); }
+                                                Image { source: @image-url("../assets/icon-256.png"); width: 72px; height: 72px; x: (parent.width - self.width) / 2; y: 8px; }
+                                            }
+                                            Text { text: "AmbraMusic"; color: Theme.text; font-size: 28px; font-weight: 800; horizontal-alignment: center; }
+                                            Text { text: "Versione " + root.version; color: Theme.accent; font-size: 14px; font-weight: 600; horizontal-alignment: center; }
+                                            Text { text: "Client YouTube Music per Windows, leggero e senza pubblicità."; color: Theme.muted; font-size: 14px; horizontal-alignment: center; wrap: word-wrap; width: max(1px, settings-scroll.visible-width - 36px); }
+                                            // Con il pannello stretto i due pulsanti vanno uno sotto l'altro invece di uscire dal riquadro.
+                                            if settings-scroll.visible-width - 36px >= 300px: HorizontalLayout { alignment: center; spacing: 10px; padding-top: 6px;
+                                                Pill { glyph: G.external; text: "GitHub"; accent: true; clicked => { root.open-url("https://github.com/Kyo89-sudo/AmbraMusic"); } }
+                                                Pill { glyph: G.refresh; text: "Versioni"; clicked => { root.open-url("https://github.com/Kyo89-sudo/AmbraMusic/releases"); } }
+                                            }
+                                            if settings-scroll.visible-width - 36px < 300px: HorizontalLayout { alignment: center; padding-top: 6px;
+                                                Pill { glyph: G.external; text: "GitHub"; accent: true; clicked => { root.open-url("https://github.com/Kyo89-sudo/AmbraMusic"); } } }
+                                            if settings-scroll.visible-width - 36px < 300px: HorizontalLayout { alignment: center;
+                                                Pill { glyph: G.refresh; text: "Versioni"; clicked => { root.open-url("https://github.com/Kyo89-sudo/AmbraMusic/releases"); } } }
+                                            Text { text: "github.com/Kyo89-sudo/AmbraMusic"; color: Theme.muted; font-size: 13px; horizontal-alignment: center; wrap: word-wrap; width: max(1px, settings-scroll.visible-width - 36px); }
+                                            HorizontalLayout { alignment: center;
+                                                Pill { glyph: G.external; text: "Apri una segnalazione"; clicked => { root.open-url("https://github.com/Kyo89-sudo/AmbraMusic/issues"); } }
+                                            }
+                                            Rectangle { height: 8px; }
+                                            Rectangle { height: 1px; background: Theme.line; }
+                                            Text { text: "CREDITI"; color: Theme.faint; font-size: 11px; letter-spacing: 1.5px; horizontal-alignment: center; }
+                                            Text { text: "Sviluppato da Kyo89-sudo. Riscrittura in Rust + Slint di Limusic di SimoHypers e contributori, da cui riprende il client InnerTube e il comportamento. Player e commenti sono scritti da noi."; color: Theme.muted; font-size: 13px; wrap: word-wrap; width: max(1px, settings-scroll.visible-width - 36px); horizontal-alignment: center; }
+                                            HorizontalLayout { alignment: center;
+                                                Action { text: "github.com/SimoHypers/limusic"; font-size: 13px; width: min(230px, max(1px, settings-scroll.visible-width - 36px)); clicked => { root.open-url("https://github.com/SimoHypers/limusic"); } }
+                                            }
+                                            Text { text: "Licenza GPL-3.0 · Icone Lucide (ISC) · Interfaccia Slint (GPLv3).\nNessuna affiliazione con Google, YouTube o Discord."; color: Theme.faint; font-size: 12px; wrap: word-wrap; width: max(1px, settings-scroll.visible-width - 36px); horizontal-alignment: center; }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+                Rectangle { height: 26px;
+                    HorizontalLayout { padding-left: 26px; padding-right: 26px; spacing: 8px;
+                        if root.busy: Spinner { width: 14px; height: 14px; y: (parent.height - self.height) / 2; }
+                        Text { text: root.status; color: Theme.faint; font-size: 12px; overflow: elide; vertical-alignment: center; horizontal-stretch: 1; }
+                    }
+                }
+            }
+            // ---- Pannello di destra: coda (e playlist se scelto) ----
+            if root.show-right: Rectangle { width: 250px; background: Theme.bar;
+                Rectangle { x: 0; width: 1px; background: Theme.line; }
+                VerticalLayout { padding: 14px; spacing: 10px;
+                    HorizontalLayout { height: 32px; spacing: 12px;
+                        PanelTab { text: "In coda"; active: root.right-tab == 0 || (root.right-tab == 1 && !(root.playlists-right && root.signed-in)) || (root.right-tab == 2 && !root.comments-enabled);
+                            clicked => { root.right-tab = 0; root.panel-tab(0); } }
+                        if root.comments-enabled: PanelTab { text: "Commenti"; badge: root.comments-state == 1 ? root.comments-count : ""; active: root.right-tab == 2;
+                            clicked => { root.right-tab = 2; root.comments-open(); } }
+                        if root.playlists-right && root.signed-in: PanelTab { text: "Playlist"; active: root.right-tab == 1; clicked => { root.right-tab = 1; root.panel-tab(1); } }
+                        Rectangle { horizontal-stretch: 1; }
+                        Action { glyph: G.close; icon-size: 15px; width: 30px; height: 30px; clicked => { root.queue-visible = false; } }
+                    }
+                    if root.right-tab == 0 || (root.right-tab == 1 && !(root.playlists-right && root.signed-in)) || (root.right-tab == 2 && !root.comments-enabled): VerticalLayout { spacing: 8px; vertical-stretch: 1;
+                        Text { text: root.queue-source != "" ? "Stai ascoltando da " + root.queue-source : root.queue.length + " brani"; color: Theme.muted; font-size: 12px; overflow: elide; }
+                        ScrollView { vertical-stretch: 1;
+                            VerticalLayout { spacing: 2px; padding-right: 12px;
+                                for row[index] in root.queue: QueueRow { item: row; current: index == root.queue-index;
+                                    play => { root.play-queue(index); } remove => { root.remove-queue(index); } }
+                                if root.queue.length == 0: Text { text: "La coda è vuota.\nUsa + per aggiungere brani."; color: Theme.faint; wrap: word-wrap; height: 90px; }
+                            }
+                        }
+                    }
+                    if root.playlists-right && root.signed-in && root.right-tab == 1: ScrollView { vertical-stretch: 1;
+                        VerticalLayout { spacing: 1px; padding-right: 12px;
+                            for p[i] in root.library: LibraryRow { item: p; open => { root.np-visible = false; root.open-library(i); } }
+                        }
+                    }
+                    // ---- Commenti del brano in ascolto ----
+                    if root.right-tab == 2 && root.comments-enabled: VerticalLayout { spacing: 8px; vertical-stretch: 1;
+                        HorizontalLayout { height: 28px; spacing: 6px;
+                            Text { text: root.track-id == "" ? "Nessun brano in ascolto" : root.track-title; color: Theme.muted; font-size: 12px; overflow: elide; vertical-alignment: center; horizontal-stretch: 1; }
+                            if root.comments-state == 1: Rectangle { width: sl.preferred-width; border-radius: 14px; background: so.has-hover ? Theme.hover : transparent;
+                                border-width: 1px; border-color: Theme.line;
+                                sl := HorizontalLayout { padding-left: 8px; padding-right: 10px; spacing: 5px;
+                                    Icon { text: G.sort; size: 12px; color: Theme.muted; y: (parent.height - self.height) / 2; }
+                                    Text { text: root.comments-newest ? "Più recenti" : "Più popolari"; color: Theme.text; font-size: 12px; font-weight: 600; vertical-alignment: center; } }
+                                so := TouchArea { mouse-cursor: pointer; clicked => { root.comments-sort(!root.comments-newest); } } }
+                        }
+                        comments-scroll := ScrollView { vertical-stretch: 1;
+                            VerticalLayout { spacing: 2px; padding-right: 12px; alignment: start;
+                                for c[i] in root.comments: CommentView { item: c; text-width: comments-scroll.visible-width - 12px - 52px;
+                                    replying: root.comments-reply-to == i;
+                                    like => { root.comment-like(i); }
+                                    reply => { root.comments-reply-to = root.comments-reply-to == i ? -1 : i; }
+                                    show-replies => { root.comment-replies(i); } }
+                                if root.comments-state == 1 && root.comments-has-more: HorizontalLayout { alignment: center; padding-top: 6px;
+                                    Pill { glyph: G.down; text: "Altri commenti"; height: 34px; clicked => { root.comments-more(); } } }
+                                if root.comments-state != 1: VerticalLayout { padding-top: 40px; spacing: 10px; alignment: start;
+                                    if root.comments-state == 0: HorizontalLayout { alignment: center; Spinner { width: 24px; height: 24px; } }
+                                    if root.comments-state != 0: HorizontalLayout { alignment: center; Icon { text: G.comment; size: 30px; color: Theme.faint; } }
+                                    if root.comments-state == 4: HorizontalLayout { alignment: center; Pill { glyph: G.refresh; text: "Riprova"; height: 34px; clicked => { root.comments-open(); } } }
+                                    Text { horizontal-alignment: center; color: Theme.muted; font-size: 13px; wrap: word-wrap; width: comments-scroll.visible-width - 12px;
+                                        text: root.comments-state == 0 ? "Carico i commenti…"
+                                            : root.comments-state == 2 ? "Ancora nessun commento.\nScrivi il primo!"
+                                            : root.comments-state == 3 ? "I commenti per questo brano sono disattivati."
+                                            : root.comments-state == 4 ? "Non riesco a caricare i commenti."
+                                            : "Avvia un brano per vederne i commenti."; }
+                                }
+                            }
+                        }
+                        // Campo in basso: commento nuovo o risposta a quello scelto.
+                        if root.comments-can-write && root.comments-state != 3: VerticalLayout { spacing: 6px;
+                            if root.comments-reply-to >= 0: HorizontalLayout { spacing: 6px; height: 22px;
+                                Icon { text: G.reply; size: 13px; color: Theme.accent; y: (parent.height - self.height) / 2; }
+                                Text { text: "Rispondi a " + root.comments[root.comments-reply-to].author; color: Theme.accent; font-size: 12px; font-weight: 600; overflow: elide; vertical-alignment: center; horizontal-stretch: 1; }
+                                Action { glyph: G.close; icon-size: 12px; width: 22px; height: 22px; clicked => { root.comments-reply-to = -1; } } }
+                            Rectangle { height: 42px; border-radius: 21px; background: Theme.field;
+                                border-width: message.has-focus ? 2px : 1px; border-color: message.has-focus ? #ff8a12 : Theme.line;
+                                HorizontalLayout { padding-left: 6px; padding-right: 5px; spacing: 8px;
+                                    Avatar { width: 28px; height: 28px; source: root.account-avatar; has-image: root.has-avatar; name: root.account-initial; y: (parent.height - self.height) / 2; }
+                                    Rectangle { horizontal-stretch: 1;
+                                        if message.text == "": Text { text: root.comments-reply-to >= 0 ? "Scrivi una risposta…" : "Aggiungi un commento…"; color: Theme.faint; font-size: 13px; vertical-alignment: center; width: 100%; height: 100%; overflow: elide; }
+                                        message := TextInput { color: Theme.text; font-size: 13px; selection-background-color: #ff8a1260; vertical-alignment: center; single-line: true;
+                                            accepted => { if self.text != "" && !root.comments-sending { root.comment-send(self.text, root.comments-reply-to); self.text = ""; root.comments-reply-to = -1; } } }
+                                    }
+                                    if root.comments-sending: Spinner { width: 20px; height: 20px; y: (parent.height - self.height) / 2; }
+                                    if !root.comments-sending: Rectangle { width: 32px; height: 32px; border-radius: 16px; y: (parent.height - self.height) / 2;
+                                        background: message.text != "" ? Theme.amber : transparent; border-width: message.text != "" ? 1px : 0px; border-color: Theme.rim;
+                                        Icon { text: G.send; size: 15px; color: message.text != "" ? Theme.on-amber : Theme.faint; x: (parent.width - self.width) / 2 - 1px; y: (parent.height - self.height) / 2; }
+                                        TouchArea { enabled: message.text != ""; mouse-cursor: message.text != "" ? pointer : default;
+                                            clicked => { root.comment-send(message.text, root.comments-reply-to); message.text = ""; root.comments-reply-to = -1; } } }
+                                }
+                            }
+                        }
+                        if !root.comments-can-write && root.comments-state != 3: Text { text: root.signed-in ? "Questo brano non accetta commenti dal tuo account." : "Accedi per scrivere un commento.";
+                            color: Theme.faint; font-size: 12px; wrap: word-wrap; width: comments-scroll.visible-width; horizontal-alignment: center; }
+                    }
+                }
+            }
+        }
+        // ---- Barra del player (disposizione di Limusic) ----
+        Rectangle { height: root.player-h; background: Theme.player;
+            if root.track-has-cover: Rectangle { background: @linear-gradient(90deg, root.np-tint.with-alpha(Theme.dark ? 0.16 : 0.10) 0%, root.np-tint.with-alpha(0) 75%); }
+            Rectangle { y: 0; height: 1px; background: Theme.line; }
+            HorizontalLayout { padding-left: 16px; padding-right: 16px; spacing: 12px;
+                HorizontalLayout { width: 250px; spacing: 6px;
+                    now := Rectangle { horizontal-stretch: 1; border-radius: 10px; background: now-touch.has-hover ? Theme.hover : transparent; height: 64px; y: (parent.height - self.height) / 2;
+                        HorizontalLayout { padding-left: 6px; padding-right: 8px; spacing: 12px;
+                            CoverArt { width: 44px; height: 44px; border-radius: 8px; y: (parent.height - self.height) / 2;
+                                source: root.track-cover; has-cover: root.track-has-cover; tint: root.np-tint; kind: "song"; }
+                            VerticalLayout { alignment: center; spacing: 4px;
+                                Text { text: root.track-title; color: Theme.text; font-size: 14px; font-weight: 600; overflow: elide; }
+                                Text { text: root.track-artist; color: Theme.muted; font-size: 12px; overflow: elide; }
+                            }
+                        }
+                        now-touch := TouchArea { mouse-cursor: pointer; clicked => { root.np-visible = !root.np-visible; } }
+                    }
+                    Action { glyph: G.heart; heart: true; filled: root.track-liked; width: 34px; height: 34px; icon-size: 17px; y: (parent.height - self.height) / 2; clicked => { root.like-current(); } }
+                }
+                VerticalLayout { horizontal-stretch: 1; alignment: center; spacing: 4px;
+                    HorizontalLayout { alignment: center; spacing: 10px; height: 40px;
+                        Action { glyph: G.shuffle; width: 36px; selected: root.shuffle; icon-size: 17px; y: (parent.height - self.height) / 2;
+                            clicked => { root.shuffle = !root.shuffle; root.set-shuffle(root.shuffle); } }
+                        Action { glyph: G.prev; width: 36px; icon-size: 19px; y: (parent.height - self.height) / 2; clicked => { root.previous(); } }
+                        PlayButton { playing: root.playing; y: (parent.height - self.height) / 2; clicked => { root.toggle(); } }
+                        Action { glyph: G.next; width: 36px; icon-size: 19px; y: (parent.height - self.height) / 2; clicked => { root.next(); } }
+                        Action { glyph: root.repeat == 2 ? G.repeat-one : G.repeat; width: 36px; selected: root.repeat > 0; icon-size: 17px; y: (parent.height - self.height) / 2;
+                            clicked => { root.repeat = mod(root.repeat + 1, 3); root.set-repeat(root.repeat); } }
+                    }
+                    HorizontalLayout { spacing: 10px; height: 24px;
+                        Text { text: root.elapsed; color: Theme.muted; font-size: 11px; width: 40px; vertical-alignment: center; horizontal-alignment: right; }
+                        AmberSlider { horizontal-stretch: 1; min-width: 200px; track-height: 5px; handle-size: 14px; minimum: 0; maximum: max(1, root.duration); value: root.position; changed(v) => { root.seek(v); } }
+                        Text { text: root.length; color: Theme.muted; font-size: 11px; width: 40px; vertical-alignment: center; }
+                    }
+                }
+                HorizontalLayout { width: 220px; spacing: 6px; alignment: end;
+                    Action { glyph: root.volume <= 0 ? G.mute : root.volume < 50 ? G.volume-low : G.volume; width: 34px; icon-size: 17px; y: (parent.height - self.height) / 2;
+                        clicked => {
+                            if root.volume > 0 { root.volume-before-mute = root.volume; root.volume = 0; } else { root.volume = max(5, root.volume-before-mute); }
+                            root.change-volume(root.volume);
+                        } }
+                    AmberSlider { width: 90px; y: (parent.height - self.height) / 2; value: root.volume; minimum: 0; maximum: 100;
+                        changed(v) => { root.volume = v; root.change-volume(v); } }
+                    Action { glyph: G.queue; width: 34px; selected: root.show-right; icon-size: 17px; y: (parent.height - self.height) / 2; clicked => { root.queue-visible = !root.queue-visible; } }
+                    Action { glyph: root.np-visible ? G.down : G.up; width: 34px; selected: root.np-visible; icon-size: 17px; y: (parent.height - self.height) / 2; clicked => { root.np-visible = !root.np-visible; } }
+                }
+            }
+        }
+    }
+
+    // Suggerimenti sotto il campo di ricerca (come SearchSuggest.svelte di Limusic).
+    if root.suggest-open && (root.suggest-queries.length > 0 || root.suggest-items.length > 0): Rectangle {
+        TouchArea { clicked => { root.suggest-open = false; } }
+        Rectangle { x: root.side-w + 70px; y: 56px; width: min(600px, root.width - root.side-w - 300px); height: sugg.preferred-height;
+            background: Theme.dialog; border-radius: 14px; border-width: 1px; border-color: Theme.line;
+            drop-shadow-blur: 24px; drop-shadow-offset-y: 8px; drop-shadow-color: #00000045;
+            sugg := VerticalLayout { padding: 8px; spacing: 1px;
+                for q in root.suggest-queries: Rectangle { height: 36px; border-radius: 8px; background: qt.has-hover ? Theme.hover : transparent;
+                    HorizontalLayout { padding-left: 10px; spacing: 12px;
+                        Icon { text: G.search; size: 15px; color: Theme.faint; y: (parent.height - self.height) / 2; }
+                        Text { text: q; color: Theme.text; font-size: 14px; vertical-alignment: center; overflow: elide; }
+                    }
+                    qt := TouchArea { mouse-cursor: pointer; clicked => { root.run-search(q); } }
+                }
+                if root.suggest-queries.length > 0 && root.suggest-items.length > 0: Rectangle { height: 1px; background: Theme.line; }
+                for item[i] in root.suggest-items: Rectangle { height: 52px; border-radius: 8px; background: it.has-hover ? Theme.hover : transparent;
+                    HorizontalLayout { padding: 6px; padding-left: 8px; spacing: 12px;
+                        CoverArt { width: 40px; height: 40px; border-radius: item.kind == "artist" ? 20px : 6px; y: (parent.height - self.height) / 2;
+                            source: item.thumb; has-cover: item.has-cover; tint: item.tint; kind: item.kind; }
+                        VerticalLayout { alignment: center; spacing: 2px;
+                            Text { text: item.title; color: Theme.text; font-size: 14px; font-weight: 500; overflow: elide; }
+                            Text { text: (item.kind == "song" ? "Brano" : item.kind == "album" ? "Album" : item.kind == "artist" ? "Artista" : "Playlist") + (item.subtitle != "" ? " • " + item.subtitle : ""); color: Theme.muted; font-size: 12px; overflow: elide; }
+                        }
+                    }
+                    it := TouchArea { mouse-cursor: pointer; clicked => { root.suggest-open = false; root.suggest-pick(i); } }
+                }
+            }
+        }
+    }
+
+    // Vista "In riproduzione" sopra contenuto e coda.
+    if root.np-visible: NowPlaying {
+        x: root.side-w; y: 0; width: root.width - root.side-w; height: root.height - root.player-h;
+        cover: root.np-cover; has-cover: root.np-has-cover; tint: root.np-tint; title: root.track-title; artist: root.track-artist; album: root.track-album;
+        playing: root.playing; liked: root.track-liked; has-track: root.track-id != ""; source: root.queue-source;
+        queue: root.queue; queue-index: root.queue-index;
+        close => { root.np-visible = false; }
+        toggle => { root.toggle(); }
+        like => { root.like-current(); }
+        volume-step(d) => { root.volume-step(d); }
+        play-queue(i) => { root.play-queue(i); }
+        remove-queue(i) => { root.remove-queue(i); }
+    }
+}
+
+// Icona nell'area di notifica con il menu di Limusic (Mostra / Riproduci / Successivo /
+// Precedente / Riavvia / Esci). Clic sinistro = mostra la finestra.
+export component AppTray inherits SystemTrayIcon {
+    in property <bool> playing;
+    in property <string> track;
+    callback show-app;
+    callback toggle;
+    callback next;
+    callback previous;
+    callback restart;
+    callback quit;
+    icon: @image-url("../assets/icon-64.png");
+    tooltip: root.track != "" ? "AmbraMusic · " + root.track : "AmbraMusic";
+    title: "AmbraMusic";
+    clicked => { root.show-app(); }
+    Menu {
+        MenuItem { title: "Mostra AmbraMusic"; activated => { root.show-app(); } }
+        MenuSeparator { }
+        MenuItem { title: root.playing ? "Pausa" : "Riproduci"; activated => { root.toggle(); } }
+        MenuItem { title: "Successivo"; activated => { root.next(); } }
+        MenuItem { title: "Precedente"; activated => { root.previous(); } }
+        MenuSeparator { }
+        MenuItem { title: "Riavvia"; activated => { root.restart(); } }
+        MenuSeparator { }
+        MenuItem { title: "Esci"; activated => { root.quit(); } }
+    }
+}
