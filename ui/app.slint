@@ -608,11 +608,11 @@ CoverArt { width: 100%; height: 100%; source: root.cover; has-cover: root.has-tr
 export component AppWindow inherits Window {
     init => { root.apply-theme(root.dark-theme); }
     title: "AmbraMusic " + root.version;
-    preferred-width: 1180px; preferred-height: 700px; min-width: 860px; min-height: 480px;
+    preferred-width: 1180px; preferred-height: 700px; min-width: 860px; min-height: 400px;
     background: Theme.bg; default-font-family: "Segoe UI"; default-font-size: 14px;
     icon: @image-url("../assets/icon.png");
     in property <image> app-icon: @image-url("../assets/icon-96.png");
-    in property <string> version: "0.5.5";
+    in property <string> version: "0.5.6";
     // Contenuto della pagina
     in property <[MusicRow]> rows;
     in property <[ShelfData]> shelves;
@@ -784,9 +784,10 @@ export component AppWindow inherits Window {
     property <bool> show-right: root.queue-visible && root.page != 5;
     property <bool> playlists-in-side: root.signed-in && !(root.playlists-right && root.show-right);
 
-    VerticalLayout {
-        spacing: 0px;
-        HorizontalLayout { spacing: 0px; vertical-stretch: 1;
+    // The content cannot move the transport controls below the client area.
+    content-pane := Rectangle {
+        x: 0px; y: 0px; width: root.width; height: max(0px, root.height - root.player-h); clip: true;
+        HorizontalLayout { spacing: 0px;
             // ---- Barra laterale ----
             Rectangle { width: root.side-w; background: Theme.side;
                 Rectangle { x: parent.width - 1px; width: 1px; background: Theme.line; }
@@ -1139,8 +1140,10 @@ export component AppWindow inherits Window {
                 }
             }
         }
-        // ---- Barra del player (disposizione di Limusic) ----
-        Rectangle { height: root.player-h; background: Theme.player;
+    }
+    // Anchored to the window, independent of the content's minimum height.
+    Rectangle { y: root.height - root.player-h; width: root.width;
+            height: root.player-h; background: Theme.player;
             if root.track-has-cover: Rectangle { background: @linear-gradient(90deg, root.np-tint.with-alpha(Theme.dark ? 0.16 : 0.10) 0%, root.np-tint.with-alpha(0) 75%); }
             Rectangle { y: 0; height: 1px; background: Theme.line; }
             HorizontalLayout { padding-left: 16px; padding-right: 16px; spacing: 12px;
@@ -1159,7 +1162,7 @@ export component AppWindow inherits Window {
                     Action { glyph: G.heart; heart: true; filled: root.track-liked; width: 34px; height: 34px; icon-size: 17px; y: (parent.height - self.height) / 2; clicked => { root.like-current(); } }
                 }
                 VerticalLayout { horizontal-stretch: 1; alignment: center; spacing: 4px;
-                    HorizontalLayout { alignment: center; spacing: 10px; height: 40px;
+                    HorizontalLayout { alignment: center; spacing: 10px; height: 44px;
                         Action { glyph: G.shuffle; width: 36px; selected: root.shuffle; icon-size: 17px; y: (parent.height - self.height) / 2;
                             clicked => { root.shuffle = !root.shuffle; root.set-shuffle(root.shuffle); } }
                         Action { glyph: G.prev; width: 36px; icon-size: 19px; y: (parent.height - self.height) / 2; clicked => { root.previous(); } }
@@ -1186,7 +1189,6 @@ export component AppWindow inherits Window {
                     Action { glyph: root.np-visible ? G.down : G.up; width: 34px; selected: root.np-visible; icon-size: 17px; y: (parent.height - self.height) / 2; clicked => { root.np-visible = !root.np-visible; } }
                 }
             }
-        }
     }
 
     // Suggerimenti sotto il campo di ricerca (come SearchSuggest.svelte di Limusic).

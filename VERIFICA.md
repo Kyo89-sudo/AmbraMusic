@@ -1,4 +1,16 @@
-# Verifica AmbraMusic 0.5.5
+# Verifica AmbraMusic 0.5.6
+
+## Correzione barra inferiore al 125% — 0.5.6
+
+- `cargo check --locked --offline -j 2`: superato sul progetto finale. Nessun avviso sul codice; soltanto il messaggio dell’ambiente relativo agli hard link della cache incrementale.
+- Tre test della geometria fisica Windows superati: caso di avvio limitato in altezza al 125%, scale 100/125/150/175/200% con coordinate di monitor negative, mantenimento di una finestra già più piccola dello spazio disponibile.
+- Layout Slint 1.18.1 compilato ed eseguito con renderer software e piattaforma headless, usando la UI originale prima e dopo la correzione. Nessuna simulazione manuale dei layout.
+- Riprodotto il difetto nella 0.5.5 con area interna 1280 × 600 pixel e scala 1,25: altezza logica 480, barra a y=491 con fondo a 579, quindi fuori dalla finestra.
+- Dopo la correzione, nelle aree interne 1280 × 600, 1600 × 850 e 1475 × 875 pixel, il fondo della barra coincide rispettivamente con 480, 680 e 700 unità logiche: sempre entro la finestra. Verificato anche l’ancoraggio dei contenuti all’origine y=0.
+- Render delle tre dimensioni ispezionati per la posizione dei comandi; il renderer software di prova può differire dal renderer GPU nell’aspetto di gradienti e bordi. Il progetto di prova resta esterno al pacchetto distribuito.
+- File Rust modificati verificati con rustfmt; collegamenti della documentazione controllati.
+
+La prova headless verifica il layout al 125%, non sostituisce l’avvio completo sul monitor Windows dell’utente. Build release con libmpv, accesso Google e ascolto non sono stati rieseguiti per questa patch. La logica Discord è invariata: i 25 test citati sotto si riferiscono alla 0.5.5.
 
 ## Documentazione e screenshot
 

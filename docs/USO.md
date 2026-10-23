@@ -28,7 +28,7 @@ Passa dal tema chiaro a quello scuro con il comando sole/luna nella barra latera
 
 Clicca sulla copertina o sulle informazioni del brano nel player per aprire **In riproduzione**. La vista mostra una copertina grande e uno sfondo armonizzato al suo colore. Quando manca un’immagine, AmbraMusic usa una copertina generata con un colore stabile per l’elemento.
 
-La finestra iniziale si adatta all’area utilizzabile del monitor su Windows, considerando taskbar e scala DPI. Questo adattamento non sostituisce una prova su ogni configurazione di schermo.
+Dalla 0.5.6 la barra inferiore ha un’area riservata, indipendente dall’altezza minima dei contenuti della pagina. La finestra iniziale si adatta all’area utilizzabile del monitor su Windows, considerando taskbar e scala DPI. Questo adattamento non sostituisce una prova su ogni configurazione di schermo.
 
 ## Account e sessione
 
@@ -56,7 +56,7 @@ Su Windows è consentita una sola istanza desktop. Un secondo avvio segnala quel
 
 Attiva o disattiva **Stato su Discord** da **Impostazioni → Generale**. L’integrazione usa il client Discord locale per mostrare le informazioni del brano; non richiede un accesso Discord separato dentro AmbraMusic.
 
-La presenza dipende dalla disponibilità del client e del collegamento IPC. Finché il repository resta privato, il logo AmbraMusic ospitato su GitHub non è pubblicamente recuperabile da Discord. La configurazione grafica della presenza non è modificabile dall’interfaccia della 0.5.5.
+La presenza dipende dalla disponibilità del client e del collegamento IPC. Finché il repository resta privato, il logo AmbraMusic ospitato su GitHub non è pubblicamente recuperabile da Discord. La configurazione grafica della presenza non è modificabile dall’interfaccia della serie 0.5.x.
 
 ## Demo e limiti delle prove
 

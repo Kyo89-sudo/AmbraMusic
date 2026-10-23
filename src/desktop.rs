@@ -46,22 +46,12 @@ pub(super) fn data_dir() -> PathBuf {
         .map(|p| p.data_local_dir().to_path_buf())
         .unwrap_or_else(|| PathBuf::from("ambramusic-data"))
 }
-// Use the nearest monitor's usable rectangle, excluding the taskbar.
+/// Fit the actual native outer frame, once the window handle and DPI are available.
 #[cfg(windows)]
 pub(super) fn fit_work_area(window: &slint::Window) {
-    #[repr(C)]
-    #[derive(Clone, Copy, Default)]
-    struct Rect {
-        left: i32,
-        top: i32,
-        right: i32,
-        bottom: i32,
-    }
-    #[repr(C)]
-    struct Point {
-        x: i32,
-        y: i32,
-    }
+    use crate::window_geometry::{self, Rect};
+    use raw_window_handle::{HasWindowHandle, RawWindowHandle};
+    use std::ffi::c_void;
     #[repr(C)]
     struct MonitorInfo {
         size: u32,
@@ -71,42 +61,54 @@ pub(super) fn fit_work_area(window: &slint::Window) {
     }
     #[link(name = "user32")]
     extern "system" {
-        fn MonitorFromPoint(point: Point, flags: u32) -> *mut std::ffi::c_void;
-        fn GetMonitorInfoW(monitor: *mut std::ffi::c_void, info: *mut MonitorInfo) -> i32;
+        fn MonitorFromWindow(window: *mut c_void, flags: u32) -> *mut c_void;
+        fn GetMonitorInfoW(monitor: *mut c_void, info: *mut MonitorInfo) -> i32;
+        fn GetWindowRect(window: *mut c_void, rect: *mut Rect) -> i32;
+        fn GetClientRect(window: *mut c_void, rect: *mut Rect) -> i32;
+        fn IsZoomed(window: *mut c_void) -> i32;
     }
-    let position = window.position();
+    let provider = window.window_handle();
+    let Ok(handle) = provider.window_handle() else {
+        return;
+    };
+    let RawWindowHandle::Win32(handle) = handle.as_raw() else {
+        return;
+    };
+    let hwnd = handle.hwnd.get() as *mut c_void;
     let mut info = MonitorInfo {
         size: std::mem::size_of::<MonitorInfo>() as u32,
         monitor: Rect::default(),
         work: Rect::default(),
         flags: 0,
     };
-    // SAFETY: Windows receives a correctly sized writable MONITORINFO structure.
+    let (mut outer, mut client) = (Rect::default(), Rect::default());
+    // SAFETY: handle originates from this Slint window; all output structs have Win32 layout.
     let ok = unsafe {
-        let monitor = MonitorFromPoint(
-            Point {
-                x: position.x,
-                y: position.y,
-            },
-            2,
-        );
-        GetMonitorInfoW(monitor, &mut info)
+        if IsZoomed(hwnd) != 0 {
+            return;
+        }
+        let monitor = MonitorFromWindow(hwnd, 2);
+        GetMonitorInfoW(monitor, &mut info) != 0
+            && GetWindowRect(hwnd, &mut outer) != 0
+            && GetClientRect(hwnd, &mut client) != 0
     };
-    if ok == 0 {
+    if !ok {
         return;
     }
-    let scale = window.scale_factor().max(1.0);
-    let margin = (16.0 * scale) as i32;
-    // Reserve space for native title bar and resize borders, also at higher DPI.
-    let frame = (48.0 * scale) as i32;
-    let width = (info.work.right - info.work.left - 2 * margin).max(1) as u32;
-    let height = (info.work.bottom - info.work.top - frame - 2 * margin).max(1) as u32;
-    let size = window.size();
-    let width = size.width.min(width);
-    let height = size.height.min(height);
-    window.set_size(slint::PhysicalSize::new(width, height));
-    window.set_position(slint::PhysicalPosition::new(
-        info.work.left + (info.work.right - info.work.left - width as i32) / 2,
-        info.work.top + margin + frame,
-    ));
+    let frame = (
+        (outer.right - outer.left - (client.right - client.left)).max(0) as u32,
+        (outer.bottom - outer.top - (client.bottom - client.top)).max(0) as u32,
+    );
+    let client_size = (client.right - client.left, client.bottom - client.top);
+    if client_size.0 <= 0 || client_size.1 <= 0 {
+        return;
+    }
+    let placement = window_geometry::fit(
+        info.work,
+        (client_size.0 as u32, client_size.1 as u32),
+        frame,
+        window.scale_factor(),
+    );
+    window.set_size(slint::PhysicalSize::new(placement.width, placement.height));
+    window.set_position(slint::PhysicalPosition::new(placement.x, placement.y));
 }

@@ -4,13 +4,13 @@
 <h1 align="center">AmbraMusic</h1>
 <p align="center"><strong>La tua musica, in una finestra dedicata.</strong></p>
 <p align="center">
-  <a href="https://github.com/Kyo89-sudo/AmbraMusic/releases/tag/v0.5.5"><img src="https://img.shields.io/badge/versione-0.5.5-f59e0b?style=flat-square" alt="Versione 0.5.5"></a>
+  <a href="https://github.com/Kyo89-sudo/AmbraMusic/releases/tag/v0.5.6"><img src="https://img.shields.io/badge/versione-0.5.6-f59e0b?style=flat-square" alt="Versione 0.5.6"></a>
   <img src="https://img.shields.io/badge/piattaforma-Windows_x64-2563eb?style=flat-square" alt="Windows x64">
   <img src="https://img.shields.io/badge/stato-beta_in_sviluppo-64748b?style=flat-square" alt="Beta in sviluppo">
   <a href="LICENSE"><img src="https://img.shields.io/badge/licenza-GPL--3.0--or--later-16a34a?style=flat-square" alt="Licenza GPL-3.0-or-later"></a>
 </p>
 <p align="center">
-  <a href="https://github.com/Kyo89-sudo/AmbraMusic/releases/tag/v0.5.5">Scarica i sorgenti</a> ·
+  <a href="https://github.com/Kyo89-sudo/AmbraMusic/releases/tag/v0.5.6">Scarica i sorgenti</a> ·
   <a href="docs/BUILD.md">Compila e prova</a> ·
   <a href="#funzioni">Funzioni</a> ·
   <a href="CHANGELOG.md">Changelog</a> ·
@@ -50,25 +50,29 @@ La tabella descrive le funzioni implementate; i controlli effettivamente eseguit
 
 Questa distribuzione contiene **i sorgenti completi**. Non è un installer Windows e non include un eseguibile release verificato in questa sessione.
 
-1. Scarica i sorgenti dalla [release v0.5.5](https://github.com/Kyo89-sudo/AmbraMusic/releases/tag/v0.5.5) oppure clona il repository.
+1. Scarica i sorgenti dalla [release v0.5.6](https://github.com/Kyo89-sudo/AmbraMusic/releases/tag/v0.5.6) oppure clona il repository.
 2. Prepara Rust stable MSVC x64, gli strumenti C++ di Visual Studio/Build Tools e Windows SDK. Per l’accesso Google serve WebView2 Runtime.
 3. Avvia `COMPILA-E-PROVA-DEMO.cmd` per la demo oppure `COMPILA-WINDOWS.cmd` per compilare l’app.
-4. Dopo la build, apri `dist\AmbraMusic-0.5.5\AmbraMusic.exe`, mantenendo `libmpv-2.dll` nella stessa cartella.
+4. Dopo la build, apri `dist\AmbraMusic-0.5.6\AmbraMusic.exe`, mantenendo `libmpv-2.dll` nella stessa cartella.
 
-[Guida completa alla compilazione](docs/BUILD.md) · [Guida alle funzioni](docs/USO.md) · [Note della release](docs/RELEASE-0.5.5.md)
+[Guida completa alla compilazione](docs/BUILD.md) · [Guida alle funzioni](docs/USO.md) · [Note della release](docs/RELEASE-0.5.6.md)
 
-## Cosa cambia nella 0.5.5
+## Cosa cambia nella 0.5.6
 
-Questa patch consolida la serie 0.5.x: rimuove percorsi Discord mai utilizzati dall’app e semplifica lo stato interno. Conserva la UI di dimensione intermedia, la barra progresso ampliata, l’adattamento iniziale alla taskbar e la gestione dell’istanza unica introdotti nelle patch precedenti.
+Questa patch corregge il taglio della barra inferiore segnalato all’avvio con schermo al 125%. Play/pausa e avanzamento hanno uno spazio riservato al fondo della finestra; il posizionamento iniziale considera i bordi reali della finestra Windows e viene ricontrollato dopo l’inizializzazione del DPI.
 
-Per l’elenco progressivo delle modifiche consulta il [changelog](CHANGELOG.md). Le [note dettagliate archiviate](docs/CHANGELOG-DETTAGLIATO.md) mantengono lo storico del lavoro.
+Il dimensionamento intermedio di testi e comandi resta quello della serie 0.5.x. Lo screenshot sopra documenta la 0.5.5; la 0.5.6 mantiene la stessa impostazione grafica.
+
+[Changelog progressivo](CHANGELOG.md) · [Note della 0.5.6](docs/RELEASE-0.5.6.md)
 
 ## Verifiche e stato del progetto
 
-| Controllo | Esito sulla 0.5.5 | Cosa dimostra |
+| Controllo | Esito e ambito | Cosa dimostra |
 | :--- | :--- | :--- |
 | Controllo di compilazione Rust e Slint | Superato | Codice e UI compilabili con `cargo check`; nessun avviso di codice inutilizzato. |
-| Logica Discord | 25 test superati | Test sul modulo originale con dipendenze reali in un progetto di test isolato. |
+| Logica Discord, invariata | 25 test superati nella 0.5.5 | Test sul modulo originale con dipendenze reali in un progetto di test isolato. |
+| Geometria DPI e taskbar | 3 test superati nella 0.5.6 | Scale comuni, incluso 125%, e monitor con coordinate negative. |
+| Layout al 125% | 3 dimensioni renderizzate e controllate | Barra inferiore entro la finestra; prova software headless, senza audio o account. |
 | Interfaccia mostrata sopra | Screenshot fornito dall’utente | Aspetto della vista In riproduzione; non sostituisce una verifica di ogni schermata. |
 | Build release e prova end-to-end | Non eseguite in questa sessione | Da verificare con librerie native, account reale e ascolto prolungato. |
 
