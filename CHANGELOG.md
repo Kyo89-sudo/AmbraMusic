@@ -1,8 +1,24 @@
 # Changelog
 
-Le versioni seguono il formato `x.y.z`. La serie 0.x è in sviluppo; le patch 0.5.1–0.5.5 raccolgono interventi progressivi su interfaccia e manutenzione. Il registro non implica che ogni patch sia stata distribuita come release GitHub separata.
+Le versioni seguono il formato `x.y.z`. La serie 0.x è in sviluppo; le patch 0.5.1–0.5.6 raccolgono interventi progressivi su interfaccia e manutenzione. Il registro non implica che ogni patch sia stata distribuita come release GitHub separata.
 
 I controlli eseguiti sono descritti in [VERIFICA.md](VERIFICA.md). Le [note di lavoro dettagliate](docs/CHANGELOG-DETTAGLIATO.md) conservano lo storico originale.
+
+## [0.5.6] — 2026-10-23
+
+### Correzioni
+
+- Barra inferiore ancorata all’area interna della finestra: i contenuti della pagina non possono più spostare play/pausa e avanzamento sotto il bordo visibile.
+- Spazio della riga comandi adeguato al pulsante Play, senza ridurre testi o scala dell’interfaccia.
+- Adattamento iniziale basato sui bordi effettivi della finestra Windows e sull’area utilizzabile del monitor, al posto di una stima delle decorazioni.
+- Ricontrollo dopo l’inizializzazione della finestra e del DPI; una finestra già massimizzata viene lasciata tale.
+- Altezza minima ridotta a 400 unità logiche per consentire l’adattamento su schermi con meno spazio al 125%.
+
+### Verifiche
+
+- Tre test della geometria superati per DPI 125%, altre scale comuni e monitor con coordinate negative.
+- Riprodotto il taglio nella UI 0.5.5; nella UI 0.5.6 la barra resta entro la finestra in tre dimensioni renderizzate al 125% con Slint software.
+- Controllo di compilazione finale superato. Dettagli in [VERIFICA.md](VERIFICA.md).
 
 ## [0.5.5] — 2026-10-23
 

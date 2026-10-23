@@ -13,6 +13,8 @@ mod session;
 #[cfg(windows)]
 mod single_instance;
 mod ui_models;
+#[cfg(windows)]
+mod window_geometry;
 use backend::{Command, Settings, Shelf, Update};
 use desktop::{data_dir, open_browser, open_url, trim_memory};
 use slint::{CloseRequestResponse, ComponentHandle, Model, ModelRc, SharedString, VecModel};
@@ -467,7 +469,15 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     // con l'impostazione disattivata).
     ui.show()?;
     #[cfg(windows)]
-    desktop::fit_work_area(ui.window());
+    {
+        desktop::fit_work_area(ui.window());
+        let weak = ui.as_weak();
+        slint::Timer::single_shot(std::time::Duration::from_millis(200), move || {
+            if let Some(ui) = weak.upgrade() {
+                desktop::fit_work_area(ui.window());
+            }
+        });
+    }
     #[cfg(windows)]
     let _instance_timer = {
         let timer = slint::Timer::default();

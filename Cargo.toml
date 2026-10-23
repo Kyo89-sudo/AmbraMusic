@@ -2,7 +2,7 @@
 resolver = "2"
 members = ["vendor/innertube", "crates/player"]
 [workspace.package]
-version = "0.5.5"
+version = "0.5.6"
 edition = "2021"
 license = "GPL-3.0-or-later"
 [workspace.dependencies]
@@ -24,7 +24,7 @@ path = "src/main.rs"
 [dependencies]
 # FemtoVG (OpenGL) come renderer principale: niente difetti di trasparenza/ridisegno del renderer
 # software. Se OpenGL non è disponibile, Slint passa da solo al renderer software.
-slint = { version = "=1.18.1", default-features = false, features = ["std", "backend-winit", "renderer-femtovg", "renderer-software", "system-tray", "compat-1-2"] }
+slint = { version = "=1.18.1", default-features = false, features = ["std", "backend-winit", "renderer-femtovg", "renderer-software", "system-tray", "compat-1-2", "raw-window-handle-06"] }
 innertube = { path = "vendor/innertube" }
 player = { path = "crates/player" }
 tokio.workspace = true
@@ -44,6 +44,7 @@ regex = "1"
 image = { version = "0.25", default-features = false, features = ["png", "jpeg", "webp"] }
 # Finestra di accesso Google (WebView2), solo Windows. Versioni allineate: wry 0.56 usa tao 0.36.
 [target.'cfg(windows)'.dependencies]
+raw-window-handle = "0.6"
 wry = { version = "0.56", default-features = false, features = ["os-webview"] }
 tao = { version = "0.36", default-features = false, features = ["rwh_06"] }
 [build-dependencies]
