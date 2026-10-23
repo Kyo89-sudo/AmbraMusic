@@ -1,5 +1,11 @@
 # Verifica AmbraMusic 0.5.5
 
+## Documentazione e screenshot
+
+È stato aggiunto uno screenshot della 0.5.5 fornito dall’utente. La modifica finale è deterministica, senza rigenerare l’interfaccia: il nome personale della playlist è sostituito da “AmbraMusic”, mentre il resto dei pixel interni è preservato. Angoli arrotondati e ombra riguardano la sola cornice editoriale. Il risultato generativo preliminare non è incluso nel repository.
+
+La schermata documenta l’aspetto mostrato dall’utente; non è una nuova prova end-to-end eseguita dall’agente. Logo, tabelle e guide aggiornano la presentazione senza modificare il codice applicativo né la versione 0.5.5.
+
 ## Cleanup codice morto — 0.5.5
 
 - `cargo check --locked --offline -j 2`: superato sul codice finale. Nessun avviso relativo al codice, inclusi quelli per elementi inutilizzati. Resta soltanto l’avviso dell’ambiente sugli hard link della cache incrementale.

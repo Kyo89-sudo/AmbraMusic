@@ -25,3 +25,7 @@ GUI `ui/app.slint`, coordinamento `src/backend.rs`, bootstrap `src/main.rs`, acc
 - L'icona AmbraMusic (A con nota) è disegnata apposta per questo progetto: sorgente in `assets/icon-source.svg`. I parametri della presenza Discord sono definiti in `src/discord.rs`; il logo AmbraMusic punta all’asset del repository.
 
 Questo pacchetto è un prototipo indipendente: nessuna affiliazione con Google, YouTube o Discord. Le eventuali modifiche future devono conservare gli obblighi di licenza del codice di origine.
+
+## Immagini di documentazione
+
+Lo screenshot in `docs/images/` è fornito dall’utente e ritoccato solo nel nome della playlist e nella cornice esterna. Le copertine e i marchi dei servizi mostrati nelle schermate appartengono ai rispettivi titolari; la licenza del codice non trasferisce diritti su tali contenuti.

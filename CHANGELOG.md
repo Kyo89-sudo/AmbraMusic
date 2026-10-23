@@ -15,7 +15,8 @@ I controlli eseguiti sono descritti in [VERIFICA.md](VERIFICA.md). Le [note di l
 
 ### Documentazione
 
-- Riscritti README e presentazione della release; separata la guida alla compilazione.
+- Riscritti README e presentazione della release con logo, tabelle delle funzioni e delle tecnologie, collegamenti e licenza; aggiunte guide a uso e compilazione.
+- Aggiunto screenshot 0.5.5 fornito dall’utente, con nome personale sostituito e cornice con angoli arrotondati e ombra.
 - Changelog organizzato per versione e tipo di modifica, con note dettagliate conservate in archivio.
 - Corretti riferimenti obsoleti alle prime alpha e all’assenza dell’area di notifica.
 

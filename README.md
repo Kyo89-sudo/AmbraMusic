@@ -1,86 +1,113 @@
 <p align="center">
-  <img src="assets/icon-256.png" width="96" alt="Icona AmbraMusic">
+  <img src="assets/icon-256.png" width="112" alt="Logo AmbraMusic">
+</p>
+<h1 align="center">AmbraMusic</h1>
+<p align="center"><strong>La tua musica, in una finestra dedicata.</strong></p>
+<p align="center">
+  <a href="https://github.com/Kyo89-sudo/AmbraMusic/releases/tag/v0.5.5"><img src="https://img.shields.io/badge/versione-0.5.5-f59e0b?style=flat-square" alt="Versione 0.5.5"></a>
+  <img src="https://img.shields.io/badge/piattaforma-Windows_x64-2563eb?style=flat-square" alt="Windows x64">
+  <img src="https://img.shields.io/badge/stato-beta_in_sviluppo-64748b?style=flat-square" alt="Beta in sviluppo">
+  <a href="LICENSE"><img src="https://img.shields.io/badge/licenza-GPL--3.0--or--later-16a34a?style=flat-square" alt="Licenza GPL-3.0-or-later"></a>
+</p>
+<p align="center">
+  <a href="https://github.com/Kyo89-sudo/AmbraMusic/releases/tag/v0.5.5">Scarica i sorgenti</a> ·
+  <a href="docs/BUILD.md">Compila e prova</a> ·
+  <a href="#funzioni">Funzioni</a> ·
+  <a href="CHANGELOG.md">Changelog</a> ·
+  <a href="https://github.com/Kyo89-sudo/AmbraMusic/issues">Segnala un problema</a>
 </p>
 
-# AmbraMusic
+AmbraMusic è un client desktop indipendente per **YouTube Music**, pensato per Windows e scritto in **Rust e Slint**. Ricerca, raccolta e coda convivono in un’interfaccia dedicata all’ascolto, con temi chiaro e scuro, accenti ambra e sfumature ispirate alle copertine.
 
-**La tua musica, in una finestra dedicata.**
+Il progetto deriva da [Limusic](https://github.com/SimoHypers/limusic), di cui conserva parte del codice e l’impostazione di alcune funzioni, e prosegue con un’interfaccia Slint e un player basato direttamente su libmpv.
 
-AmbraMusic è un client desktop indipendente per YouTube Music, pensato per Windows e scritto in **Rust e Slint**. Riunisce ricerca, raccolta, coda e controlli di riproduzione in un’interfaccia con temi chiaro e scuro, accenti ambra e colori ispirati alle copertine.
+## Anteprima
 
-Il progetto nasce dal lavoro di [Limusic](https://github.com/SimoHypers/limusic), di cui conserva parte del codice e l’impostazione di alcune funzioni, e prosegue con un’interfaccia Slint e un player basato direttamente su libmpv.
+<p align="center">
+  <img src="docs/images/ambramusic-0.5.5-light.png" width="1100" alt="AmbraMusic 0.5.5 nel tema chiaro: copertina del brano, coda laterale e controlli di riproduzione">
+</p>
+<p align="center"><sub>Vista In riproduzione · Tema chiaro · AmbraMusic 0.5.5</sub></p>
 
-**Versione attuale: 0.5.5 · Beta in sviluppo · Windows x64 · GPL-3.0-or-later**
+Screenshot fornito dall’utente, con nome personale sostituito da “AmbraMusic” e sola cornice editoriale. Copertina, contenuti e controlli dell’interfaccia sono quelli dello screenshot originale.
 
-[Novità](CHANGELOG.md) · [Compilazione](docs/BUILD.md) · [Note della 0.5.5](docs/RELEASE-0.5.5.md) · [Verifiche](VERIFICA.md) · [Segnala un problema](https://github.com/Kyo89-sudo/AmbraMusic/issues)
+## Funzioni
 
-## Ascolto al centro
+| Area | Cosa puoi fare | Approfondisci |
+| :--- | :--- | :--- |
+| **Ricerca e scoperta** | Cerca con suggerimenti e filtri; esplora Home, playlist, album e artisti. | [Ricerca e navigazione](docs/USO.md#ricerca-e-navigazione) |
+| **Player e coda** | Riproduci, metti in pausa, salta, regola volume e posizione; usa shuffle, ripeti e continuazione automatica. | [Riproduzione e coda](docs/USO.md#riproduzione-e-coda) |
+| **Raccolta e preferiti** | Accedi a playlist e brani piaciuti dell’account; gestisci i preferiti locali anche senza accesso. | [Raccolta e preferiti](docs/USO.md#raccolta-e-preferiti) |
+| **Copertine e temi** | Scegli tema chiaro o scuro e apri la vista In riproduzione con copertina grande e sfondo armonizzato. | [Aspetto e copertine](docs/USO.md#aspetto-e-copertine) |
+| **Accesso Google** | Collega l’account in una finestra dedicata, salva la sessione su Windows o usa il Cookie header avanzato. | [Account e sessione](docs/USO.md#account-e-sessione) |
+| **Commenti** | Leggi e ordina i commenti, espandi le risposte e usa le interazioni disponibili per l’account collegato. | [Commenti](docs/USO.md#commenti) |
+| **Area di notifica** | Continua l’ascolto dalla tray; richiama la finestra e usa i comandi del menu. Un secondo avvio richiama l’istanza esistente. | [Finestra e area di notifica](docs/USO.md#finestra-e-area-di-notifica) |
+| **Discord Rich Presence** | Mostra il brano in ascolto sul profilo Discord e attiva o disattiva l’integrazione dalle Impostazioni. | [Discord](docs/USO.md#discord) |
+| **Demo** | Esplora l’interfaccia con dati di esempio senza collegare un account. | [Compilazione e demo](docs/BUILD.md#compilazione-guidata) |
 
-- **Trova cosa ascoltare.** Ricerca con suggerimenti e filtri, Home a scaffali e pagine dedicate a playlist, album e artisti.
-- **Organizza la riproduzione.** Coda, riproduzione casuale, ripeti e continuazione automatica con brani simili.
-- **Scegli la tua vista.** Player sempre disponibile e vista In riproduzione con copertina grande, titolo, artista e album.
-- **Ritrova la tua raccolta.** Accesso Google integrato, playlist e brani piaciuti dell’account; preferiti locali anche senza account.
-- **Leggi la conversazione.** Pannello commenti con ordinamento, risposte e interazioni disponibili per l’account collegato.
-- **Tieni la musica con te.** Area di notifica con comandi, ripristino della finestra e protezione dagli avvii duplicati.
-- **Mostra cosa ascolti.** Discord Rich Presence, attivabile dalle Impostazioni.
+La tabella descrive le funzioni implementate; i controlli effettivamente eseguiti sono documentati in [VERIFICA.md](VERIFICA.md).
 
-## Un’interfaccia che si adatta
+## Inizia da qui
 
-La serie 0.5.x rivede dimensioni e leggibilità: comandi più equilibrati, barra di avanzamento più ampia e scheda Aiuto e info con testi a capo e contenuti scorrevoli. All’avvio, su Windows, la finestra viene adattata all’area utilizzabile del monitor, considerando taskbar e scala DPI.
+Questa distribuzione contiene **i sorgenti completi**. Non è un installer Windows e non include un eseguibile release verificato in questa sessione.
 
-I temi chiaro e scuro usano superfici neutre, mentre gli accenti ambra identificano i comandi principali. La copertina del brano aggiunge una sfumatura di colore al player e alla vista In riproduzione.
+1. Scarica i sorgenti dalla [release v0.5.5](https://github.com/Kyo89-sudo/AmbraMusic/releases/tag/v0.5.5) oppure clona il repository.
+2. Prepara Rust stable MSVC x64, gli strumenti C++ di Visual Studio/Build Tools e Windows SDK. Per l’accesso Google serve WebView2 Runtime.
+3. Avvia `COMPILA-E-PROVA-DEMO.cmd` per la demo oppure `COMPILA-WINDOWS.cmd` per compilare l’app.
+4. Dopo la build, apri `dist\AmbraMusic-0.5.5\AmbraMusic.exe`, mantenendo `libmpv-2.dll` nella stessa cartella.
 
-Un secondo avvio richiama l’istanza già aperta, anche quando è nascosta nell’area di notifica. La finestra separata dell’accesso Google resta consentita.
+[Guida completa alla compilazione](docs/BUILD.md) · [Guida alle funzioni](docs/USO.md) · [Note della release](docs/RELEASE-0.5.5.md)
 
-## Provala dai sorgenti
+## Cosa cambia nella 0.5.5
 
-Questo repository distribuisce i sorgenti. **Non è un installer Windows e non contiene un eseguibile release verificato in questa sessione.**
+Questa patch consolida la serie 0.5.x: rimuove percorsi Discord mai utilizzati dall’app e semplifica lo stato interno. Conserva la UI di dimensione intermedia, la barra progresso ampliata, l’adattamento iniziale alla taskbar e la gestione dell’istanza unica introdotti nelle patch precedenti.
 
-Occorrono Rust stable con toolchain MSVC x64, Visual Studio o Build Tools con strumenti C++ e Windows SDK. Per l’accesso Google serve WebView2 Runtime.
+Per l’elenco progressivo delle modifiche consulta il [changelog](CHANGELOG.md). Le [note dettagliate archiviate](docs/CHANGELOG-DETTAGLIATO.md) mantengono lo storico del lavoro.
 
-1. Scarica o clona il repository ed estrailo in una cartella con un percorso breve.
-2. Esegui `COMPILA-E-PROVA-DEMO.cmd` per compilare e aprire la demo grafica con dati di esempio.
-3. Per l’uso normale esegui `COMPILA-WINDOWS.cmd`, poi avvia `dist\AmbraMusic-0.5.5\AmbraMusic.exe`.
+## Verifiche e stato del progetto
 
-Mantieni `AmbraMusic.exe` e `libmpv-2.dll` nella stessa cartella. La demo usa contenuti di esempio e non richiede un account Google.
+| Controllo | Esito sulla 0.5.5 | Cosa dimostra |
+| :--- | :--- | :--- |
+| Controllo di compilazione Rust e Slint | Superato | Codice e UI compilabili con `cargo check`; nessun avviso di codice inutilizzato. |
+| Logica Discord | 25 test superati | Test sul modulo originale con dipendenze reali in un progetto di test isolato. |
+| Interfaccia mostrata sopra | Screenshot fornito dall’utente | Aspetto della vista In riproduzione; non sostituisce una verifica di ogni schermata. |
+| Build release e prova end-to-end | Non eseguite in questa sessione | Da verificare con librerie native, account reale e ascolto prolungato. |
 
-La [guida alla compilazione](docs/BUILD.md) spiega prerequisiti, cache, log e controlli disponibili.
-
-## Accesso e dati locali
-
-Apri **Impostazioni → Account → Accedi con Google**. L’accesso avviene sulla pagina di Google in una finestra WebView2 separata. AmbraMusic acquisisce i cookie della sessione per collegarsi a YouTube Music.
-
-Su Windows la sessione salvata viene cifrata con DPAPI e associata all’utente locale. Il profilo WebView2 è separato dal browser abituale. Puoi cambiare account, annullare l’accesso o disconnetterti dalle Impostazioni.
-
-È disponibile anche l’inserimento manuale del Cookie header nelle opzioni avanzate. **Cookie e file di sessione sono credenziali: non inserirli nelle issue, nei log condivisi o nei commit.**
-
-## Stato del progetto
-
-AmbraMusic è una beta in evoluzione. Il lavoro attuale si concentra su usabilità, ordine del codice e consolidamento delle funzioni esistenti.
-
-Per la 0.5.5 sono stati completati il controllo di compilazione con `cargo check` e **25 test della logica Discord** eseguiti sul modulo originale in un progetto di test isolato con dipendenze reali. Non sono emersi avvisi di codice inutilizzato.
-
-Questi controlli non sostituiscono una prova completa dell’app: build release, accesso con un account reale, ascolto prolungato, tray e comportamento visivo su diversi monitor non sono stati verificati end-to-end in questa sessione. Il [rapporto delle verifiche](VERIFICA.md) distingue i controlli attuali da quelli storici.
+AmbraMusic è una **beta in sviluppo**. La priorità è consolidare l’ascolto e correggere problemi riproducibili, mantenendo il lavoro per versioni successive. Il [rapporto di verifica](VERIFICA.md) distingue i controlli attuali da quelli storici.
 
 ### Limiti noti
 
-- La riproduzione dipende dai servizi e dalle risposte di YouTube Music: alcuni brani o sessioni possono richiedere ulteriori correzioni del client.
+- La riproduzione dipende dalle risposte di YouTube Music; alcuni brani o sessioni possono richiedere ulteriori correzioni del client.
 - Non è disponibile la scelta del canale per account con più canali YouTube.
 - Testi sincronizzati, video, modifica delle playlist, tasti multimediali di sistema e aggiornamenti automatici non sono inclusi.
-- Linux è un ambiente di sviluppo secondario: l’accesso Google integrato è specifico di Windows.
+- Linux è un ambiente di sviluppo secondario; l’accesso Google integrato è specifico di Windows.
 - Finché il repository resta privato, il logo Discord ospitato su GitHub non è recuperabile pubblicamente tramite il suo URL.
-- Le immagini in `anteprime/` documentano versioni precedenti e non rappresentano la UI attuale della 0.5.5.
+- Le immagini in `anteprime/` sono storiche; lo screenshot attuale è in `docs/images/`.
 
-## Segnalazioni utili
+## Account e riservatezza
 
-Apri una [issue](https://github.com/Kyo89-sudo/AmbraMusic/issues) indicando versione di AmbraMusic, versione di Windows, scala DPI, passaggi per riprodurre il problema e risultato atteso. Uno screenshot può aiutare per i difetti dell’interfaccia.
+L’accesso si apre dalla pagina **Impostazioni → Account**. Google viene mostrato in una finestra WebView2 separata; AmbraMusic acquisisce i cookie di sessione necessari per collegarsi a YouTube Music. Su Windows la sessione salvata viene cifrata con DPAPI e associata all’utente locale.
 
-Rimuovi da log e immagini cookie, dati di sessione e informazioni personali prima di condividerli.
+Cookie, file di sessione e dati di accesso sono credenziali: non inserirli nelle issue, nei log condivisi o nei commit. I dettagli sono nella [guida account e sessione](docs/USO.md#account-e-sessione).
 
-## Crediti e licenza
+## Segnalazioni e contributi
 
-AmbraMusic è sviluppato da **Kyo89-sudo** a partire da [Limusic](https://github.com/SimoHypers/limusic), di **SimoHypers e contributori**. Il riferimento upstream e le parti derivate sono documentati in [THIRD-PARTY.md](THIRD-PARTY.md).
+Per una segnalazione utile, [apri una issue](https://github.com/Kyo89-sudo/AmbraMusic/issues) con versione di AmbraMusic, versione di Windows, scala DPI, passaggi per riprodurre il problema e risultato atteso. Per difetti grafici aggiungi, se possibile, uno screenshot senza dati personali.
 
-Il codice è distribuito sotto [GPL-3.0-or-later](LICENSE). Le licenze delle dipendenze e delle icone restano quelle dei rispettivi autori.
+Per proporre un intervento, descrivi prima il problema e mantieni le modifiche circoscritte. I contributi devono rispettare la licenza del progetto e i crediti del codice derivato.
+
+## Tecnologie, crediti e licenza
+
+| Componente | Ruolo | Riferimento |
+| :--- | :--- | :--- |
+| **Rust** | Logica applicativa e coordinamento dei servizi | [rust-lang.org](https://www.rust-lang.org/) |
+| **Slint** | Interfaccia desktop | [slint.dev](https://slint.dev/) |
+| **libmpv** | Riproduzione audio tramite API C | [mpv.io](https://mpv.io/) |
+| **WebView2** | Finestra di accesso Google su Windows | [Microsoft WebView2](https://developer.microsoft.com/microsoft-edge/webview2/) |
+| **Lucide** | Icone dell’interfaccia | [Lucide](https://lucide.dev/) · [licenza inclusa](assets/fonts/LUCIDE-LICENSE.txt) |
+| **Limusic** | Progetto di origine e parti di codice derivate | [SimoHypers/limusic](https://github.com/SimoHypers/limusic) |
+
+AmbraMusic è sviluppato da **Kyo89-sudo**, a partire dal lavoro di **SimoHypers e contributori** su Limusic. Provenienza, commit di riferimento e dipendenze sono descritti in [THIRD-PARTY.md](THIRD-PARTY.md).
+
+Il codice è distribuito sotto **GPL-3.0-or-later**: consulta il [testo della licenza](LICENSE). Dipendenze, icone e altri componenti mantengono le rispettive licenze; le copertine musicali mostrate nello screenshot appartengono ai rispettivi titolari.
 
 AmbraMusic è un progetto indipendente e non è affiliato a Google, YouTube o Discord.
