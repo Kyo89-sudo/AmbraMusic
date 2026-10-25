@@ -15,6 +15,7 @@ Usa un percorso breve, per esempio `C:\Progetti\AmbraMusic`, per ridurre i probl
 
 - `COMPILA-WINDOWS.cmd`: prepara le dipendenze e compila la versione release.
 - `COMPILA-E-PROVA-DEMO.cmd`: compila e apre la demo con dati di esempio.
+- `CREA-INSTALLER.cmd`: compila l’app e genera l’installer Windows personalizzato.
 
 Lo script `scripts/build-windows.ps1` individua Visual Studio tramite `vswhere`, inizializza gli strumenti x64, prepara il target Rust e scarica una versione fissata di libmpv con verifica SHA256. Poi prepara la libreria MSVC e avvia Cargo.
 
@@ -44,3 +45,11 @@ Per conoscere i controlli effettivamente completati consulta [VERIFICA.md](../VE
 Il progetto include percorsi Linux, ma il target principale resta Windows. Il login WebView2 non è disponibile su Linux: l’alternativa è il Cookie header; il salvataggio della sessione non usa DPAPI.
 
 Servono toolchain Rust, strumenti C/C++, librerie di sviluppo di mpv e dipendenze grafiche del backend Slint. Esegui `cargo build` e `cargo run -- --demo` in un ambiente configurato; la build Linux completa non è stata verificata in questa sessione.
+
+## Generare l’installer
+
+`CREA-INSTALLER.cmd` usa la build release e compila interfaccia e motore dell’installer dai sorgenti C# in `installer/`, tramite il compilatore .NET Framework x64 di Windows. Non richiede Inno Setup o NSIS.
+
+Dopo una build già completata puoi eseguire `powershell -File scripts/build-installer.ps1 -SkipBuild`. Per mantenere la cache in una cartella specifica, passa `-CacheDir C:\Percorso\Cache` agli script di build.
+
+Dettagli su formato del pacchetto, aggiornamento e test isolati: [installer/README.md](../installer/README.md).

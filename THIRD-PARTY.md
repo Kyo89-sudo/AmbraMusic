@@ -24,8 +24,16 @@ GUI `ui/app.slint`, coordinamento `src/backend.rs`, bootstrap `src/main.rs`, acc
 - Il comportamento di coda, radio, ricerca e tray segue quello di Limusic (GPL-3.0), reimplementato in `src/backend.rs`, `src/pages.rs` e `ui/app.slint`; i testi dell'interfaccia sono propri.
 - L'icona AmbraMusic (A con nota) è disegnata apposta per questo progetto: sorgente in `assets/icon-source.svg`. I parametri della presenza Discord sono definiti in `src/discord.rs`; il logo AmbraMusic punta all’asset del repository.
 
-Questo pacchetto è un prototipo indipendente: nessuna affiliazione con Google, YouTube o Discord. Le eventuali modifiche future devono conservare gli obblighi di licenza del codice di origine.
+AmbraMusic è un progetto indipendente: nessuna affiliazione con Google, YouTube o Discord. Le eventuali modifiche future devono conservare gli obblighi di licenza del codice di origine.
 
 ## Immagini di documentazione
 
 Lo screenshot in `docs/images/` è fornito dall’utente e ritoccato solo nel nome della playlist e nella cornice esterna. Le copertine e i marchi dei servizi mostrati nelle schermate appartengono ai rispettivi titolari; la licenza del codice non trasferisce diritti su tali contenuti.
+
+## Distribuzione binaria Windows
+
+L’installer e il disinstallatore sono scritti per AmbraMusic in C# e Windows Forms, sotto GPL-3.0-or-later. Usano .NET Framework presente su Windows; non includono o ridistribuiscono il runtime Microsoft.
+
+La distribuzione installata contiene `licenses/`: licenze dei crate Rust raccolte dai pacchetti del lockfile, indice delle dipendenze e documentazione di provenienza del motore libmpv. Il pacchetto audio fissato dall’upstream contiene la sola DLL; origine, hash e riferimenti ai progetti sorgenti sono riportati in [installer/licenses/mpv/SOURCE.md](installer/licenses/mpv/SOURCE.md).
+
+Sono inoltre inclusi i due runtime Visual C++ richiesti dall’eseguibile, presi dalla cartella redistribuibile x64 di Visual Studio e installati accanto all’app. Restano componenti Microsoft con le rispettive condizioni; riferimenti e versione dei file si trovano in `licenses/MICROSOFT-VCRUNTIME.md`.

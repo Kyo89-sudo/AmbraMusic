@@ -528,6 +528,7 @@ component CommentView inherits Rectangle {
 // Vista "In riproduzione" come in Limusic: copertina grande al centro, sfondo tinto con il suo
 // colore, coda a destra. Clic sulla copertina = play/pausa, rotella = volume.
 component NowPlaying inherits Rectangle {
+    min-width: 0px; min-height: 0px; clip: true;
     in property <image> cover;
     in property <bool> has-cover;
     in property <color> tint;
@@ -551,7 +552,7 @@ component NowPlaying inherits Rectangle {
     TouchArea { }
     HorizontalLayout { padding: 20px; padding-left: 28px; spacing: 24px;
         stage := Rectangle { horizontal-stretch: 1;
-            property <length> art: clamp(min(self.width - 60px, self.height - 170px), 140px, 640px);
+            property <length> art: clamp(min(self.width - 60px, self.height - 196px), 80px, 640px);
             property <length> art-x: (self.width - self.art) / 2;
             property <length> art-y: max(52px, (self.height - self.art - 118px) / 2 + 20px);
             Rectangle { x: (parent.width - self.width) / 2; y: parent.art-y + parent.art * 0.1; width: parent.art * 1.2; height: parent.art * 0.95; border-radius: self.width / 2;
@@ -576,16 +577,16 @@ CoverArt { width: 100%; height: 100%; source: root.cover; has-cover: root.has-tr
                     scroll-event(e) => { root.volume-step(e.delta-y > 0 ? 5 : -5); return accept; }
                 }
             }
-            HorizontalLayout { x: parent.art-x; y: parent.art-y + parent.art + 20px; width: parent.art; height: 92px; spacing: 10px;
+            info-row := HorizontalLayout { x: 16px; y: parent.art-y + parent.art + 16px; width: max(0px, parent.width - 32px); height: 104px; spacing: 10px;
                 VerticalLayout { alignment: start; spacing: 5px;
-                    Text { text: root.has-track ? root.title : "Nessun brano"; color: Theme.text; font-size: 24px; font-weight: 700; wrap: word-wrap; overflow: elide; max-height: 62px; }
+                    Text { text: root.has-track ? root.title : "Nessun brano"; color: Theme.text; font-size: 24px; font-weight: 700; wrap: word-wrap; overflow: elide; max-height: 60px; }
                     Text { text: root.artist; color: Theme.dark ? #d8d2cc : #4a423c; font-size: 14px; overflow: elide; }
                     if root.album != "": Text { text: root.album; color: Theme.muted; font-size: 13px; overflow: elide; }
                 }
                 if root.has-track: Action { glyph: G.heart; heart: true; filled: root.liked; width: 42px; height: 42px; icon-size: 21px; clicked => { root.like(); } }
             }
         }
-        Rectangle { width: 330px; border-radius: 16px; background: Theme.dark ? #ffffff08 : #ffffffb0; border-width: 1px; border-color: Theme.line;
+        Rectangle { width: clamp(root.width * 0.34, 220px, 330px); border-radius: 16px; background: Theme.dark ? #ffffff08 : #ffffffb0; border-width: 1px; border-color: Theme.line;
             VerticalLayout { padding: 14px; spacing: 10px;
                 HorizontalLayout { height: 30px; spacing: 8px;
                     Icon { text: G.queue; size: 18px; color: Theme.accent; y: (parent.height - self.height) / 2; }
@@ -612,7 +613,7 @@ export component AppWindow inherits Window {
     background: Theme.bg; default-font-family: "Segoe UI"; default-font-size: 14px;
     icon: @image-url("../assets/icon.png");
     in property <image> app-icon: @image-url("../assets/icon-96.png");
-    in property <string> version: "0.5.6";
+    in property <string> version: "0.5.7";
     // Contenuto della pagina
     in property <[MusicRow]> rows;
     in property <[ShelfData]> shelves;
@@ -789,9 +790,11 @@ export component AppWindow inherits Window {
         x: 0px; y: 0px; width: root.width; height: max(0px, root.height - root.player-h); clip: true;
         HorizontalLayout { spacing: 0px;
             // ---- Barra laterale ----
-            Rectangle { width: root.side-w; background: Theme.side;
+            Rectangle { width: root.side-w; height: content-pane.height; background: Theme.side;
                 Rectangle { x: parent.width - 1px; width: 1px; background: Theme.line; }
-                VerticalLayout { padding: 14px; padding-top: 16px; spacing: 4px;
+                sidebar-scroll := ScrollView {
+                    x: 0px; y: 0px; width: parent.width; height: parent.height;
+                sidebar-content := VerticalLayout { width: sidebar-scroll.visible-width; height: max(sidebar-scroll.visible-height, self.preferred-height); padding: 14px; padding-top: 16px; spacing: 4px;
                     HorizontalLayout { height: 44px; spacing: 10px; padding-left: 6px;
                         Image { source: root.app-icon; width: 30px; height: 30px; image-fit: contain; y: (parent.height - self.height) / 2; }
                         Text { text: "AmbraMusic"; color: Theme.text; font-size: 18px; font-weight: 700; vertical-alignment: center; horizontal-stretch: 1; }
@@ -809,7 +812,7 @@ export component AppWindow inherits Window {
                     Rectangle { height: 1px; background: Theme.line; }
                     Rectangle { height: 6px; }
                     if root.playlists-in-side: Text { text: "PLAYLIST"; color: Theme.faint; font-size: 11px; letter-spacing: 1.5px; height: 24px; vertical-alignment: center; }
-                    if root.playlists-in-side: ScrollView { vertical-stretch: 1;
+                    if root.playlists-in-side: ScrollView { height: max(100px, sidebar-scroll.visible-height - 410px); vertical-stretch: 1;
                         VerticalLayout { spacing: 1px; padding-right: 10px;
                             for p[i] in root.library: LibraryRow { item: p; open => { root.np-visible = false; root.open-library(i); } }
                             if root.library.length == 0: Text { text: "Caricamento delle playlist…"; color: Theme.faint; font-size: 12px; height: 40px; }
@@ -829,6 +832,7 @@ export component AppWindow inherits Window {
                         }
                     }
                     if !root.playlists-in-side && root.signed-in: Rectangle { vertical-stretch: 1; }
+                }
                 }
             }
             // ---- Contenuto ----
@@ -914,14 +918,16 @@ export component AppWindow inherits Window {
                     if root.page == 5: settings-view := Rectangle {
                         // Finestra stretta: colonna delle schede e margini più piccoli, più spazio al riquadro.
                         HorizontalLayout { padding: settings-view.width < 760px ? 16px : 26px; padding-top: 6px; spacing: settings-view.width < 760px ? 14px : 26px;
-                            VerticalLayout { width: settings-view.width < 760px ? 142px : 170px; spacing: 4px; alignment: start;
-                                Text { text: "Impostazioni"; color: Theme.text; font-size: 22px; font-weight: 800; height: 42px; vertical-alignment: center; }
+                            settings-nav-scroll := ScrollView { width: settings-view.width < 760px ? 142px : 170px;
+                            VerticalLayout { width: settings-nav-scroll.visible-width; spacing: 4px; alignment: start;
+                                Text { text: "Impostazioni"; color: Theme.text; font-size: 20px; font-weight: 700; overflow: elide; height: 42px; vertical-alignment: center; }
                                 Nav { label: "Account"; glyph: G.account; active: root.settings-tab == 0; clicked => { root.settings-tab = 0; } }
                                 Nav { label: "Generale"; glyph: G.settings; active: root.settings-tab == 1; clicked => { root.settings-tab = 1; } }
                                 Nav { label: "Aspetto"; glyph: G.sun; active: root.settings-tab == 2; clicked => { root.settings-tab = 2; } }
                                 Nav { label: "Riproduzione"; glyph: G.play; active: root.settings-tab == 3; clicked => { root.settings-tab = 3; } }
                                 Nav { label: "Archivio e cache"; glyph: G.disc; active: root.settings-tab == 4; clicked => { root.settings-tab = 4; } }
                                 Nav { label: "Aiuto e info"; glyph: G.music; active: root.settings-tab == 5; clicked => { root.settings-tab = 5; } }
+                            }
                             }
                             Rectangle { horizontal-stretch: 1; border-radius: 16px; background: Theme.card; border-width: 1px; border-color: Theme.line;
                                 settings-scroll := ScrollView {
@@ -1004,37 +1010,33 @@ export component AppWindow inherits Window {
                                                 Pill { glyph: G.trash; text: "Svuota cache"; y: (parent.height - self.height) / 2; clicked => { root.clear-cache(); } } }
                                         }
                                         if root.settings-tab == 5: VerticalLayout { width: max(1px, settings-scroll.visible-width - 36px); spacing: 10px; alignment: start;
-                                            Rectangle { height: 12px; }
-                                            // Icona al centro, con il bagliore ambra dell'app.
-                                            Rectangle { height: 88px;
-                                                Rectangle { width: 88px; height: 88px; x: (parent.width - self.width) / 2; border-radius: 75px;
-                                                    background: @radial-gradient(circle, #ff8a1240 0%, #ff8a1200 70%); }
-                                                Image { source: @image-url("../assets/icon-256.png"); width: 72px; height: 72px; x: (parent.width - self.width) / 2; y: 8px; }
+                                            HorizontalLayout { height: 60px; spacing: 12px;
+                                                Image { source: @image-url("../assets/icon-256.png"); width: 48px; height: 48px; image-fit: contain; y: (parent.height - self.height) / 2; }
+                                                VerticalLayout { alignment: start; spacing: 3px;
+                                                    Text { text: "AmbraMusic"; color: Theme.text; font-size: 22px; font-weight: 700; }
+                                                    Text { text: "Versione " + root.version; color: Theme.accent; font-size: 13px; font-weight: 600; }
+                                                }
                                             }
-                                            Text { text: "AmbraMusic"; color: Theme.text; font-size: 28px; font-weight: 800; horizontal-alignment: center; }
-                                            Text { text: "Versione " + root.version; color: Theme.accent; font-size: 14px; font-weight: 600; horizontal-alignment: center; }
-                                            Text { text: "Client YouTube Music per Windows, leggero e senza pubblicità."; color: Theme.muted; font-size: 14px; horizontal-alignment: center; wrap: word-wrap; width: max(1px, settings-scroll.visible-width - 36px); }
+                                            Text { text: "YouTube Music sul desktop Windows."; color: Theme.muted; font-size: 13px; wrap: word-wrap; }
                                             // Con il pannello stretto i due pulsanti vanno uno sotto l'altro invece di uscire dal riquadro.
-                                            if settings-scroll.visible-width - 36px >= 300px: HorizontalLayout { alignment: center; spacing: 10px; padding-top: 6px;
+                                            if settings-scroll.visible-width - 36px >= 300px: HorizontalLayout { alignment: start; spacing: 10px; padding-top: 6px;
                                                 Pill { glyph: G.external; text: "GitHub"; accent: true; clicked => { root.open-url("https://github.com/Kyo89-sudo/AmbraMusic"); } }
                                                 Pill { glyph: G.refresh; text: "Versioni"; clicked => { root.open-url("https://github.com/Kyo89-sudo/AmbraMusic/releases"); } }
                                             }
-                                            if settings-scroll.visible-width - 36px < 300px: HorizontalLayout { alignment: center; padding-top: 6px;
+                                            if settings-scroll.visible-width - 36px < 300px: HorizontalLayout { alignment: start; padding-top: 6px;
                                                 Pill { glyph: G.external; text: "GitHub"; accent: true; clicked => { root.open-url("https://github.com/Kyo89-sudo/AmbraMusic"); } } }
-                                            if settings-scroll.visible-width - 36px < 300px: HorizontalLayout { alignment: center;
+                                            if settings-scroll.visible-width - 36px < 300px: HorizontalLayout { alignment: start;
                                                 Pill { glyph: G.refresh; text: "Versioni"; clicked => { root.open-url("https://github.com/Kyo89-sudo/AmbraMusic/releases"); } } }
-                                            Text { text: "github.com/Kyo89-sudo/AmbraMusic"; color: Theme.muted; font-size: 13px; horizontal-alignment: center; wrap: word-wrap; width: max(1px, settings-scroll.visible-width - 36px); }
-                                            HorizontalLayout { alignment: center;
-                                                Pill { glyph: G.external; text: "Apri una segnalazione"; clicked => { root.open-url("https://github.com/Kyo89-sudo/AmbraMusic/issues"); } }
+                                            HorizontalLayout { alignment: start;
+                                                Pill { glyph: G.external; text: "Segnala un problema"; clicked => { root.open-url("https://github.com/Kyo89-sudo/AmbraMusic/issues"); } }
                                             }
-                                            Rectangle { height: 8px; }
                                             Rectangle { height: 1px; background: Theme.line; }
-                                            Text { text: "CREDITI"; color: Theme.faint; font-size: 11px; letter-spacing: 1.5px; horizontal-alignment: center; }
-                                            Text { text: "Sviluppato da Kyo89-sudo. Riscrittura in Rust + Slint di Limusic di SimoHypers e contributori, da cui riprende il client InnerTube e il comportamento. Player e commenti sono scritti da noi."; color: Theme.muted; font-size: 13px; wrap: word-wrap; width: max(1px, settings-scroll.visible-width - 36px); horizontal-alignment: center; }
-                                            HorizontalLayout { alignment: center;
+                                            Text { text: "CREDITI"; color: Theme.faint; font-size: 11px; letter-spacing: 1.5px; horizontal-alignment: left; }
+                                            Text { text: "Sviluppato da Kyo89-sudo in Rust e Slint, a partire da Limusic di SimoHypers e contributori."; color: Theme.muted; font-size: 13px; wrap: word-wrap; width: max(1px, settings-scroll.visible-width - 36px); horizontal-alignment: left; }
+                                            HorizontalLayout { alignment: start;
                                                 Action { text: "github.com/SimoHypers/limusic"; font-size: 13px; width: min(230px, max(1px, settings-scroll.visible-width - 36px)); clicked => { root.open-url("https://github.com/SimoHypers/limusic"); } }
                                             }
-                                            Text { text: "Licenza GPL-3.0 · Icone Lucide (ISC) · Interfaccia Slint (GPLv3).\nNessuna affiliazione con Google, YouTube o Discord."; color: Theme.faint; font-size: 12px; wrap: word-wrap; width: max(1px, settings-scroll.visible-width - 36px); horizontal-alignment: center; }
+                                            Text { text: "GPL-3.0-or-later · Icone Lucide (ISC) · Slint (GPLv3).\nNessuna affiliazione con Google, YouTube o Discord."; color: Theme.faint; font-size: 12px; wrap: word-wrap; width: max(1px, settings-scroll.visible-width - 36px); horizontal-alignment: left; }
                                         }
                                     }
                                 }
@@ -1193,11 +1195,13 @@ export component AppWindow inherits Window {
 
     // Suggerimenti sotto il campo di ricerca (come SearchSuggest.svelte di Limusic).
     if root.suggest-open && (root.suggest-queries.length > 0 || root.suggest-items.length > 0): Rectangle {
+        x: 0px; y: 0px; width: root.width; height: root.height - root.player-h; clip: true;
         TouchArea { clicked => { root.suggest-open = false; } }
-        Rectangle { x: root.side-w + 70px; y: 56px; width: min(600px, root.width - root.side-w - 300px); height: sugg.preferred-height;
+        Rectangle { x: root.side-w + 70px; y: 56px; width: min(600px, root.width - root.side-w - 300px); height: min(sugg.preferred-height, max(0px, root.height - root.player-h - self.y - 8px));
             background: Theme.dialog; border-radius: 14px; border-width: 1px; border-color: Theme.line;
             drop-shadow-blur: 24px; drop-shadow-offset-y: 8px; drop-shadow-color: #00000045;
-            sugg := VerticalLayout { padding: 8px; spacing: 1px;
+            suggest-scroll := ScrollView {
+            sugg := VerticalLayout { width: suggest-scroll.visible-width; padding: 8px; spacing: 1px;
                 for q in root.suggest-queries: Rectangle { height: 36px; border-radius: 8px; background: qt.has-hover ? Theme.hover : transparent;
                     HorizontalLayout { padding-left: 10px; spacing: 12px;
                         Icon { text: G.search; size: 15px; color: Theme.faint; y: (parent.height - self.height) / 2; }
@@ -1217,6 +1221,7 @@ export component AppWindow inherits Window {
                     }
                     it := TouchArea { mouse-cursor: pointer; clicked => { root.suggest-open = false; root.suggest-pick(i); } }
                 }
+            }
             }
         }
     }
