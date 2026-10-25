@@ -1,4 +1,4 @@
-﻿param([switch]$Demo, [switch]$Run)
+﻿param([switch]$Demo, [switch]$Run, [string]$CacheDir)
 $ErrorActionPreference = 'Stop'
 $root = Split-Path $PSScriptRoot -Parent
 Set-Location $root
@@ -18,7 +18,7 @@ try {
     if ($LASTEXITCODE -ne 0) { throw 'Installazione target Rust fallita.' }
     # Cache comune a tutte le versioni (fuori dalla cartella del progetto): libmpv si scarica una
     # volta sola e le librerie Rust già compilate si riusano quando estrai uno ZIP nuovo.
-    $cache = Join-Path $env:LOCALAPPDATA 'AmbraMusic\build-cache'
+    $cache = if ($CacheDir) { [IO.Path]::GetFullPath($CacheDir) } else { Join-Path $env:LOCALAPPDATA 'AmbraMusic\build-cache' }
     New-Item -ItemType Directory -Force $cache | Out-Null
     $env:CARGO_TARGET_DIR = Join-Path $cache 'target'
     $native = Join-Path $root 'native'
@@ -56,8 +56,8 @@ try {
     @('EXPORTS') + ($names | ForEach-Object { "    $_" }) | Set-Content $def -Encoding ascii
     & lib.exe /nologo "/def:$def" /name:libmpv-2.dll "/out:$native\mpv.lib" /machine:x64
     if ($LASTEXITCODE -ne 0) { throw 'Creazione mpv.lib fallita.' }
-    # Senza --locked: la 0.2 aggiunge wry/tao e Cargo.lock va completato al primo avvio.
-    & $cargo build --release --target x86_64-pc-windows-msvc
+    # Usa le versioni esatte delle dipendenze verificate nel repository.
+    & $cargo build --release --locked --target x86_64-pc-windows-msvc
     if ($LASTEXITCODE -ne 0) { throw 'Compilazione fallita: consulta COMPILAZIONE.log.' }
     # La cartella di distribuzione prende la versione da Cargo.toml.
     $ver = (Select-String -Path (Join-Path $root 'Cargo.toml') -Pattern '^version = "(.+)"' | Select-Object -First 1).Matches[0].Groups[1].Value

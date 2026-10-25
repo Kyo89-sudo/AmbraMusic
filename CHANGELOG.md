@@ -1,8 +1,37 @@
 # Changelog
 
-Le versioni seguono il formato `x.y.z`. La serie 0.x è in sviluppo; le patch 0.5.1–0.5.6 raccolgono interventi progressivi su interfaccia e manutenzione. Il registro non implica che ogni patch sia stata distribuita come release GitHub separata.
+Le versioni seguono il formato `x.y.z`. La serie 0.x è in sviluppo; le patch 0.5.1–0.5.7 raccolgono interventi progressivi su interfaccia e manutenzione. Il registro non implica che ogni patch sia stata distribuita come release GitHub separata.
 
 I controlli eseguiti sono descritti in [VERIFICA.md](VERIFICA.md). Le [note di lavoro dettagliate](docs/CHANGELOG-DETTAGLIATO.md) conservano lo storico originale.
+
+## [0.5.7] — 2026-10-25
+
+### Distribuzione Windows
+
+- Aggiunto installer x64 con interfaccia Windows Forms e motore di installazione dedicati ad AmbraMusic.
+- Installazione per utente, collegamenti Start/desktop, registrazione tra le applicazioni Windows e disinstallatore incluso.
+- Payload verificato con SHA-256, staging prima della sostituzione e ripristino se il cambio di cartella fallisce.
+- Aggiornamento che conserva i file aggiunti dall’utente; disinstallazione che conserva i file modificati e i dati dell’app.
+- Pipeline riproducibile in `scripts/build-installer.ps1`, raccolta delle licenze delle dipendenze e build Rust con lockfile bloccato.
+
+### Interfaccia e correzioni
+
+- Aiuto e info più compatto: logo accanto a nome e versione, allineamento coerente alle impostazioni, collegamenti e crediti essenziali.
+- Barra laterale e indice delle impostazioni scorrevoli: i comandi restano raggiungibili anche nelle finestre basse.
+- Copertina e coda della vista In riproduzione adattate allo spazio disponibile; titolo, artista e album non invadono il player nelle dimensioni verificate.
+- Suggerimenti di ricerca scorrevoli e limitati all’area sopra il player; il pannello aperto lascia utilizzabili i comandi di riproduzione.
+- Dimensioni dei testi e della barra di avanzamento mantenute.
+
+### Verifiche
+
+- Build release Windows x64 completata; avvio nativo e schermata Aiuto controllati al 125%.
+- Cinque configurazioni di layout e interazioni di scorrimento/clic verificate.
+- Cinque prove isolate del pacchetto reale dell’installer superate, inclusi percorsi lunghi, aggiornamento e disinstallazione selettiva.
+- Pacchetti senza firma Authenticode; ambito e limiti dei controlli riportati in VERIFICA.md.
+
+### Riferimenti
+
+[Confronto 0.5.6 → 0.5.7](https://github.com/Kyo89-sudo/AmbraMusic/compare/v0.5.6...v0.5.7) · [Note di release](docs/RELEASE-0.5.7.md) · [Verifiche](VERIFICA.md)
 
 ## [0.5.6] — 2026-10-23
 

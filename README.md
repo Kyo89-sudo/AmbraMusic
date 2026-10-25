@@ -2,15 +2,16 @@
   <img src="assets/icon-256.png" width="112" alt="Logo AmbraMusic">
 </p>
 <h1 align="center">AmbraMusic</h1>
-<p align="center"><strong>La tua musica, in una finestra dedicata.</strong></p>
+<p align="center"><strong>Client desktop YouTube Music per Windows, in Rust e Slint.</strong></p>
 <p align="center">
-  <a href="https://github.com/Kyo89-sudo/AmbraMusic/releases/tag/v0.5.6"><img src="https://img.shields.io/badge/versione-0.5.6-f59e0b?style=flat-square" alt="Versione 0.5.6"></a>
+  <a href="https://github.com/Kyo89-sudo/AmbraMusic/releases/tag/v0.5.7"><img src="https://img.shields.io/badge/versione-0.5.7-f59e0b?style=flat-square" alt="Versione 0.5.7"></a>
   <img src="https://img.shields.io/badge/piattaforma-Windows_x64-2563eb?style=flat-square" alt="Windows x64">
   <img src="https://img.shields.io/badge/stato-beta_in_sviluppo-64748b?style=flat-square" alt="Beta in sviluppo">
   <a href="LICENSE"><img src="https://img.shields.io/badge/licenza-GPL--3.0--or--later-16a34a?style=flat-square" alt="Licenza GPL-3.0-or-later"></a>
 </p>
 <p align="center">
-  <a href="https://github.com/Kyo89-sudo/AmbraMusic/releases/tag/v0.5.6">Scarica i sorgenti</a> ·
+  <a href="https://github.com/Kyo89-sudo/AmbraMusic/releases/download/v0.5.7/AmbraMusic-Setup-0.5.7-x64.exe">Installer Windows x64</a> ·
+  <a href="https://github.com/Kyo89-sudo/AmbraMusic/releases/tag/v0.5.7">Release e sorgenti</a> ·
   <a href="docs/BUILD.md">Compila e prova</a> ·
   <a href="#funzioni">Funzioni</a> ·
   <a href="CHANGELOG.md">Changelog</a> ·
@@ -50,20 +51,33 @@ La tabella descrive le funzioni implementate; i controlli effettivamente eseguit
 
 Questa distribuzione contiene **i sorgenti completi**. Non è un installer Windows e non include un eseguibile release verificato in questa sessione.
 
-1. Scarica i sorgenti dalla [release v0.5.6](https://github.com/Kyo89-sudo/AmbraMusic/releases/tag/v0.5.6) oppure clona il repository.
-2. Prepara Rust stable MSVC x64, gli strumenti C++ di Visual Studio/Build Tools e Windows SDK. Per l’accesso Google serve WebView2 Runtime.
-3. Avvia `COMPILA-E-PROVA-DEMO.cmd` per la demo oppure `COMPILA-WINDOWS.cmd` per compilare l’app.
-4. Dopo la build, apri `dist\AmbraMusic-0.5.6\AmbraMusic.exe`, mantenendo `libmpv-2.dll` nella stessa cartella.
+1. Scarica **[AmbraMusic-Setup-0.5.7-x64.exe](https://github.com/Kyo89-sudo/AmbraMusic/releases/download/v0.5.7/AmbraMusic-Setup-0.5.7-x64.exe)**.
+2. Chiudi eventuali istanze già aperte scegliendo **Esci** dall’icona nell’area di notifica.
+3. Avvia l’installer e scegli **Installa**. Il collegamento desktop è opzionale; l’app viene aggiunta al menu Start.
 
-[Guida completa alla compilazione](docs/BUILD.md) · [Guida alle funzioni](docs/USO.md) · [Note della release](docs/RELEASE-0.5.6.md)
+L’installer opera sul tuo account e non richiede privilegi amministrativi. Per l’accesso Google serve WebView2 Runtime. Il pacchetto non è firmato con un certificato Authenticode.
 
-## Cosa cambia nella 0.5.6
+Per compilare da sorgente usa `COMPILA-WINDOWS.cmd`; per generare anche l’installer usa `CREA-INSTALLER.cmd`.
 
-Questa patch corregge il taglio della barra inferiore segnalato all’avvio con schermo al 125%. Play/pausa e avanzamento hanno uno spazio riservato al fondo della finestra; il posizionamento iniziale considera i bordi reali della finestra Windows e viene ricontrollato dopo l’inizializzazione del DPI.
+<p align="center"><img src="docs/images/ambramusic-setup-0.5.7.png" width="500" alt="Installer personalizzato AmbraMusic 0.5.7"></p>
 
-Il dimensionamento intermedio di testi e comandi resta quello della serie 0.5.x. Lo screenshot sopra documenta la 0.5.5; la 0.5.6 mantiene la stessa impostazione grafica.
+[Guida all’installazione](docs/INSTALLAZIONE.md) · [Compilazione](docs/BUILD.md) · [Funzioni](docs/USO.md)
 
-[Changelog progressivo](CHANGELOG.md) · [Note della 0.5.6](docs/RELEASE-0.5.6.md)
+## Novità della 0.5.7
+
+Prima distribuzione con installer Windows dedicato: interfaccia e motore di installazione scritti per AmbraMusic, aggiornamento per utente e disinstallazione selettiva. Il pacchetto include eseguibile, motore audio e licenze.
+
+La patch compatta Aiuto e info, rende scorrevoli i menu nelle finestre basse e corregge lo spazio dei dati del brano in In riproduzione. I suggerimenti di ricerca non coprono più i comandi del player.
+
+<details>
+<summary>Aiuto e info nella 0.5.7</summary>
+
+![Aiuto e info 0.5.7](docs/images/ambramusic-0.5.7-help.png)
+
+Ritaglio della finestra Windows reale al 125%, limitato alla sezione delle impostazioni.
+</details>
+
+[Installazione](docs/INSTALLAZIONE.md) · [Changelog](CHANGELOG.md) · [Note di release](docs/RELEASE-0.5.7.md) · [Confronto con la 0.5.6](https://github.com/Kyo89-sudo/AmbraMusic/compare/v0.5.6...v0.5.7)
 
 ## Verifiche e stato del progetto
 
@@ -72,9 +86,10 @@ Il dimensionamento intermedio di testi e comandi resta quello della serie 0.5.x.
 | Controllo di compilazione Rust e Slint | Superato | Codice e UI compilabili con `cargo check`; nessun avviso di codice inutilizzato. |
 | Logica Discord, invariata | 25 test superati nella 0.5.5 | Test sul modulo originale con dipendenze reali in un progetto di test isolato. |
 | Geometria DPI e taskbar | 3 test superati nella 0.5.6 | Scale comuni, incluso 125%, e monitor con coordinate negative. |
-| Layout al 125% | 3 dimensioni renderizzate e controllate | Barra inferiore entro la finestra; prova software headless, senza audio o account. |
+| Layout UI 0.5.7 | 5 configurazioni e interazioni verificate | Barra inferiore entro la finestra; prova software headless, senza audio o account. |
 | Interfaccia mostrata sopra | Screenshot fornito dall’utente | Aspetto della vista In riproduzione; non sostituisce una verifica di ogni schermata. |
-| Build release e prova end-to-end | Non eseguite in questa sessione | Da verificare con librerie native, account reale e ascolto prolungato. |
+| Build release Windows x64 | Superata | Eseguibile collegato con libmpv; avvio nativo e navigazione nelle impostazioni verificati. |
+| Installer personalizzato | 5 prove sul pacchetto reale superate | Installazione, aggiornamento, disinstallazione selettiva, rifiuto cartelle estranee e collegamenti; prove isolate. |
 
 AmbraMusic è una **beta in sviluppo**. La priorità è consolidare l’ascolto e correggere problemi riproducibili, mantenendo il lavoro per versioni successive. Il [rapporto di verifica](VERIFICA.md) distingue i controlli attuali da quelli storici.
 
@@ -84,7 +99,6 @@ AmbraMusic è una **beta in sviluppo**. La priorità è consolidare l’ascolto 
 - Non è disponibile la scelta del canale per account con più canali YouTube.
 - Testi sincronizzati, video, modifica delle playlist, tasti multimediali di sistema e aggiornamenti automatici non sono inclusi.
 - Linux è un ambiente di sviluppo secondario; l’accesso Google integrato è specifico di Windows.
-- Finché il repository resta privato, il logo Discord ospitato su GitHub non è recuperabile pubblicamente tramite il suo URL.
 - Le immagini in `anteprime/` sono storiche; lo screenshot attuale è in `docs/images/`.
 
 ## Account e riservatezza

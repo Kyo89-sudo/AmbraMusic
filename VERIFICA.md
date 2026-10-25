@@ -1,4 +1,30 @@
-# Verifica AmbraMusic 0.5.6
+# Verifica AmbraMusic 0.5.7
+
+## UI e distribuzione Windows — 0.5.7, 2026-10-25
+
+### Applicazione
+
+- `cargo check --locked --offline -j 2` superato. L’unico avviso riguarda gli hard link della cache incrementale dell’ambiente.
+- Build release `x86_64-pc-windows-msvc` completata con lockfile bloccato, libmpv e risorse Windows.
+- Avvio della build nativa verificato: Home, Impostazioni e Aiuto e info. Il player rimane visibile nella finestra osservata al 125%. La schermata di Aiuto pubblicata è un ritaglio della finestra reale, senza rigenerazione grafica e senza dati dell’account.
+- Layout Slint eseguito in un harness separato con la UI corrente e rendering software. Cinque configurazioni dell’app: 860×400 al 100%, 1075×500 al 125%, 1290×600 al 150%, 1720×800 al 200%, 1475×875 al 125%.
+- Provati entrambi i temi e stato collegato/non collegato; verificati barra inferiore entro la finestra e contenuto completo della barra laterale raggiungibile tramite scorrimento.
+- Interazioni inviate alla UI reale del test: rotella sulla navigazione, apertura di Aiuto dopo lo scorrimento dell’indice, clic su Play con suggerimenti aperti e selezione di un suggerimento dopo lo scorrimento.
+- In riproduzione confrontato con la 0.5.6: il fondo delle informazioni era a 304 su 272 unità di spazio; ora è a 257 su 272 nei casi bassi. Quattro dimensioni della vista provate, con titolo lungo, artista e album.
+
+Il renderer software del test può mostrare differenze nei gradienti rispetto al renderer GPU dell’app. Il wrapper di prova della vista In riproduzione segnala un ciclo nella propagazione delle dimensioni della sua finestra di test; questo avviso non compare nella compilazione dell’app. La verifica geometrica è stata completata e confrontata con le immagini, includendo le dimensioni minime.
+
+### Installer
+
+- Compilati installer e disinstallatore x64 dai sorgenti C#, usando .NET Framework 4.8 e manifest DPI-aware. Interfaccia personalizzata verificata visivamente.
+- Analizzate le dipendenze PE dell’app; incluse `libmpv-2.dll`, `vcruntime140.dll` e `vcruntime140_1.dll` insieme all’eseguibile.
+- Pacchetto libmpv fissato dal progetto: SHA-256 verificato prima dell’estrazione. Licenze dei pacchetti Cargo e riferimenti di provenienza raccolti nella cartella `licenses` installata.
+- Cinque prove isolate superate sul payload reale incorporato nell’installer: installazione e SHA-256, aggiornamento con conservazione dei file aggiunti, disinstallazione selettiva dei file originali, rifiuto di cartelle estranee senza modificarle, creazione e rimozione dei collegamenti con controllo della destinazione.
+- Il test usa un percorso lungo in una fixture, senza modificare registrazione applicazioni, menu Start o desktop reali. Il primo tentativo ha rilevato il limite del percorso .NET; il comportamento è stato corretto e la prova completa ripetuta con esito positivo. La prova della pipeline Windows PowerShell 5.1 ha inoltre verificato la normalizzazione dei separatori nei nomi ZIP per il riconoscimento dei file durante l’aggiornamento.
+
+### Limiti della verifica
+
+Non è stata eseguita una matrice su macchine Windows pulite, né un ciclo completo di installazione tramite la UI nelle cartelle personali reali. Accesso Google da zero, ascolto prolungato e flusso completo di riproduzione non sono stati rieseguiti per questa patch. L’installer non ha firma Authenticode. I test Discord e della geometria della finestra sotto riportati appartengono alle versioni precedenti e non sono stati ripetuti senza modifiche a quei moduli.
 
 ## Correzione barra inferiore al 125% — 0.5.6
 
