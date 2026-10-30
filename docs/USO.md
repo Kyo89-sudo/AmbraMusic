@@ -42,9 +42,9 @@ Gli account con più canali usano il canale predefinito: non è presente un sele
 
 ## Commenti
 
-Nel pannello laterale seleziona la scheda **Commenti** per leggere la discussione del brano corrente. Sono disponibili ordinamento, risposte espandibili e interazioni quando consentite dall’account e dal servizio.
+Con un brano in ascolto, premi il pulsante **Commenti** (il fumetto accanto alla coda, nella barra del player) oppure scegli la scheda **Commenti** nel pannello laterale per leggere la discussione del brano corrente. Premendo di nuovo il pulsante il pannello torna com’era. Sono disponibili ordinamento, risposte espandibili e interazioni quando consentite dall’account e dal servizio.
 
-Puoi disattivare la funzione da **Impostazioni → Generale → Commenti dei brani**. I commenti vengono richiesti quando la scheda è aperta; i token restano nel motore e sono associati all’account che li ha ottenuti.
+Puoi disattivare la funzione da **Impostazioni → Generale → Commenti dei brani**. I commenti vengono richiesti solo mentre la scheda è visibile; se la pubblicazione non riesce, il testo scritto resta nel campo; i token restano nel motore e sono associati all’account che li ha ottenuti.
 
 ## Finestra e area di notifica
 

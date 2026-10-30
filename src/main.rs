@@ -284,7 +284,6 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                     Update::OpenPlayer => ui.set_np_visible(true),
                     Update::Shuffle(on) => ui.set_shuffle(on),
                     Update::Comments(c) => {
-                        let n = c.rows.len() as i32;
                         let items: Vec<CommentItem> = c
                             .rows
                             .into_iter()
@@ -311,17 +310,32 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                                 }
                             })
                             .collect();
-                        ui.set_comments(ModelRc::new(VecModel::from(items)));
+                        // La risposta in corso punta a una riga: si segue il commento per id,
+                        // perché le risposte caricate sopra spostano gli indici.
+                        let old = ui.get_comments();
+                        let replying = usize::try_from(ui.get_comments_reply_to())
+                            .ok()
+                            .and_then(|i| old.row_data(i))
+                            .map(|it| it.id);
+                        let reply_to = if c.reset {
+                            -1
+                        } else {
+                            replying
+                                .and_then(|id| items.iter().position(|it| it.id == id))
+                                .map_or(-1, |i| i as i32)
+                        };
+                        update_comments(&ui, items, c.reset);
                         ui.set_comments_state(c.view);
                         ui.set_comments_count(c.count.into());
                         ui.set_comments_newest(c.newest);
                         ui.set_comments_has_more(c.has_more);
                         ui.set_comments_can_write(c.can_write);
                         ui.set_comments_sending(c.sending);
-                        // La risposta in corso punta a una riga: con un elenco nuovo non vale più.
-                        if c.reset || ui.get_comments_reply_to() >= n {
-                            ui.set_comments_reply_to(-1);
-                        }
+                        ui.set_comments_reply_to(reply_to);
+                    }
+                    Update::CommentSent => {
+                        ui.set_comments_draft(SharedString::new());
+                        ui.set_comments_reply_to(-1);
                     }
                     Update::Status(s, b) => {
                         ui.set_status(s.into());
@@ -514,4 +528,29 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         std::process::Command::new(std::env::current_exe()?).spawn()?;
     }
     Ok(())
+}
+
+/// Aggiorna l'elenco dei commenti nel modello già mostrato, riga per riga, invece di
+/// sostituirlo: un modello nuovo ricrea tutte le righe e fa saltare lo scorrimento a ogni foto
+/// scaricata o mi piace. Un elenco nuovo (`reset`: altro brano o altro ordine) si sostituisce.
+fn update_comments(ui: &AppWindow, items: Vec<CommentItem>, reset: bool) {
+    let current = ui.get_comments();
+    let model = current.as_any().downcast_ref::<VecModel<CommentItem>>();
+    let Some(model) = model.filter(|_| !reset) else {
+        ui.set_comments(ModelRc::new(VecModel::from(items)));
+        return;
+    };
+    let keep = model.row_count().min(items.len());
+    while model.row_count() > items.len() {
+        model.remove(model.row_count() - 1);
+    }
+    for (i, item) in items.into_iter().enumerate() {
+        if i < keep {
+            if model.row_data(i).as_ref() != Some(&item) {
+                model.set_row_data(i, item);
+            }
+        } else {
+            model.push(item);
+        }
+    }
 }

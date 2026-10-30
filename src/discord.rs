@@ -1,45 +1,31 @@
-//! Discord Rich Presence via Discord's local IPC socket.
+//! Discord Rich Presence tramite il socket IPC locale di Discord.
 //!
-//! Metrolist hand-rolls an OAuth2+PKCE login and a raw Gateway client because Android has no
-//! Discord app to talk to — it has to authenticate *as the user* and push `PRESENCE_UPDATE`
-//! itself. On desktop that whole stack is unnecessary: the running Discord client exposes an IPC
-//! socket that accepts a presence payload directly. So there is no login, no token store, no
-//! heartbeat, no reconnect strategy, and no `external-assets` header spoof — the local client does
-//! all of it, and the identity is simply whoever is signed into Discord.
+//! Sul desktop non servono login, token o gateway: il client Discord in esecuzione espone un
+//! socket IPC che accetta direttamente l'attività, e l'identità è semplicemente l'account già
+//! collegato a Discord. Il client IPC è bloccante e con stato, quindi vive in un thread dedicato
+//! alimentato da un canale. Tutto è best-effort: Discord chiuso o che si chiude a metà brano è una
+//! riga `debug!`, mai un errore mostrato all'utente.
 //!
-//! Mirrors `media.rs`: the IPC client is blocking and stateful, so it gets an owner thread fed by a
-//! channel. Everything here is best-effort — Discord not running, or quitting mid-song, is a
-//! `debug!` line, never an error the user sees (context/16 fail-soft, same as the OS media widget).
+//! La scheda si vede **solo durante la riproduzione** (con `show_paused`, anche in pausa, ma solo
+//! dopo che qualcosa è stato davvero riprodotto in questa sessione). Una scheda in pausa non ha
+//! barra di avanzamento, perché Discord non conosce la pausa e la barra continuerebbe a correre.
+//! Il cambio di brano non è una pausa: la scheda resta finché parte il brano nuovo
+//! ([`SWITCH_GRACE`]).
 //!
-//! Presence is shown **only while actually playing**, unless the user turns on "show when paused"
-//! (issue #226). Even then, a card needs playback to have started at least once this session: the
-//! queue restored on launch is paused too, and a frozen "Listening to…" for a track nobody pressed
-//! play on is worse than no card. A paused card also carries no timeline, because Discord has no
-//! paused state and its progress bar would keep running.
+//! Regole per una barra corretta:
+//! 1. Un cambio di brano azzera la posizione: l'app avvia sempre i brani dall'inizio.
+//! 2. Le posizioni portano l'`Instant` in cui sono state lette e il thread le invecchia: la coda
+//!    degli eventi può restare indietro di qualche secondo rispetto a mpv.
+//! 3. Solo i veri cambi del flag di pausa di mpv cambiano `playing`: mpv manda `time-pos` anche
+//!    quando si cerca in pausa.
 //!
-//! Timeline correctness hinges on three rules:
-//! 1. A track change resets the thread's position to 0 — the app only ever starts tracks from the
-//!    top, and trusting the previous track's stale position put every new song minutes in.
-//! 2. Position messages carry the `Instant` they were *sent*, and the thread age-corrects — the
-//!    event pump can lag seconds behind mpv (gapless advance resolves the next track over the
-//!    network before draining more events), and an un-aged position "corrects" the timeline
-//!    backwards.
-//! 3. Only real mpv pause-flag transitions change `playing` — mpv fires `time-pos` on seeks while
-//!    paused, so a position tick must never be treated as proof of playback.
+//! Il socket si apre appena la presenza è attiva, non al primo brano, così la prima scheda non
+//! aspetta la connessione.
 //!
-//! The socket is opened as soon as presence is enabled, not lazily on the first card — connecting
-//! on demand meant the first song of a session waited out a connect round-trip (and a single failed
-//! attempt stalled it for the whole retry interval) before anything showed up.
-//!
-//! Sending is rate-limited, because Discord silently drops presence updates that arrive too close
-//! together — and a dropped update is invisible (the socket ACKs it). Four rules keep state from
-//! getting stranded behind that: a **trailing-edge floor** (when a push is due but too soon, the
-//! loop sleeps until the floor expires and then sends whatever is current — never discards it),
-//! a short **grace** on a brand-new track so its length can land before the first push, a
-//! **frame window** (`MAX_FRAMES` per `FRAME_WINDOW`) ensuring we do not exceed Discord's rate limits,
-//! and a **track settle** (`TRACK_SETTLE`) that collapses rapid skip bursts into one push. Without
-//! the grace, a track change pushed a bar-less card and needed a second push milliseconds later,
-//! which Discord dropped — leaving the card stuck as an elapsed counter with no progress bar.
+//! Gli invii sono limitati, perché Discord scarta in silenzio gli aggiornamenti troppo ravvicinati
+//! (e il socket conferma lo stesso): una **soglia minima** tra due invii che rimanda e non scarta,
+//! una breve **attesa della durata** su un brano nuovo, una **finestra** di `MAX_FRAMES` invii per
+//! `FRAME_WINDOW` e un **assestamento** (`TRACK_SETTLE`) che riunisce i salti rapidi in un invio.
 
 use std::collections::VecDeque;
 use std::sync::mpsc::{channel, Receiver, RecvTimeoutError, Sender, TryRecvError};
@@ -48,13 +34,9 @@ use std::time::{Duration, Instant, SystemTime, UNIX_EPOCH};
 use discord_rich_presence::{activity, DiscordIpc, DiscordIpcClient};
 use innertube::SongItem;
 
-/// Discord application id (a snowflake — digits only). **Must be set before rich presence does
-/// anything.** Register an app named "Limusic" at <https://discord.com/developers/applications> and
-/// paste its Application ID here — the app's *name* is what renders after "Listening to", and its
-/// icon is the fallback artwork. Nothing else in the portal needs configuring: no bot user, no
-/// OAuth redirect, no client secret. (Metrolist needs all of that only because Android has no
-/// Discord client.)
-/// Applicazione "AmbraMusic" registrata sul Discord Developer Portal (solo l'ID, pubblico).
+/// Applicazione "AmbraMusic" registrata sul Discord Developer Portal (solo l'ID, pubblico). Il
+/// suo nome è quello che compare dopo "Sta ascoltando"; nel portale non serve altro (niente bot,
+/// redirect OAuth o secret).
 const APP_ID: &str = "1562862534652993642";
 
 const SONG_URL: &str = "https://music.youtube.com/watch?v=";
@@ -62,7 +44,7 @@ const ARTIST_URL: &str = "https://music.youtube.com/channel/";
 const ALBUM_URL: &str = "https://music.youtube.com/browse/";
 const REPO_URL: &str = "https://github.com/Kyo89-sudo/AmbraMusic";
 /// The small "provider badge" Discord draws in the corner of the artwork, the way Spotify's and
-/// Apple Music's cards do (issue #226). Served straight from the repo so there is no asset to
+/// Apple Music's cards do. Served straight from the repo so there is no asset to
 /// register in the Discord developer portal and nothing to keep in sync at release time; if this
 /// path ever moves, the badge silently stops rendering and nothing else breaks.
 const BADGE_URL: &str =
@@ -100,6 +82,12 @@ const FRAME_WINDOW: Duration = Duration::from_secs(21);
 /// to span the gap between presses in a skip burst, short enough that a single skip still shows
 /// up almost immediately).
 const TRACK_SETTLE: Duration = Duration::from_millis(1000);
+/// How long the card of the previous track stays up while the next one is being resolved. The app
+/// stops mpv before it asks YouTube for the new stream (one to several seconds): treating that gap
+/// as a pause took the card down and put it back a moment later, two frames out of the five per
+/// window and a visible flicker on every skip. If the new track never starts, the card is taken
+/// down once this runs out.
+const SWITCH_GRACE: Duration = Duration::from_secs(12);
 /// Floor for any computed wait — handing `recv_timeout` a zero duration would spin.
 const MIN_WAIT: Duration = Duration::from_millis(10);
 /// Discord rejects `details`/`state`/`large_text` outside 2–128 characters.
@@ -115,7 +103,7 @@ const MAX_BUTTON_URL: usize = 512;
 struct RpcConfig {
     /// Which slot Discord renders after "Listening to": `app` | `line1` | `line2`.
     status_line: String,
-    /// Replaces the registered application name in that slot. Empty keeps "Limusic".
+    /// Replaces the registered application name in that slot. Empty keeps "AmbraMusic".
     app_name: String,
     /// What the card's first line (`details`) carries: `title` | `artist` | `album`.
     line1: String,
@@ -136,14 +124,14 @@ struct RpcConfig {
     /// Show the elapsed/remaining progress bar. Ignored while paused: Discord has no paused state,
     /// so a bar left on a paused card keeps advancing and lies.
     timestamps: bool,
-    /// Draw the Limusic badge in the corner of the artwork. Needs [`Self::cover`]: Discord renders
+    /// Draw the AmbraMusic badge in the corner of the artwork. Needs [`Self::cover`]: Discord renders
     /// `small_image` as a badge *over* the large one, and on its own it would become the artwork.
     badge: bool,
     /// Keep the card up while paused. Gated on playback having started at least once this session,
     /// so the queue restored at launch does not post a card for a track nobody played.
     show_paused: bool,
     /// Say only that music is playing: no title, artist, album, artwork, bar or buttons. Overrides
-    /// everything else on this struct, which is why the settings tab hides the rest when it is on.
+    /// everything else on this struct.
     hide_details: bool,
     /// The two buttons, in card order: `listen` | `album` | `artist` | `app` | `off`.
     button1: String,
@@ -182,6 +170,8 @@ enum Msg {
     },
     /// A real play/pause transition (mpv's pause flag), never inferred from position ticks.
     Playing(bool),
+    /// Playback stopped because the app is loading another track: not a pause the card must show.
+    Switching,
     Enabled(bool),
 }
 
@@ -243,6 +233,11 @@ impl DiscordHandle {
 
     pub fn set_playing(&self, playing: bool) {
         let _ = self.tx.send(Msg::Playing(playing));
+    }
+
+    /// The current track was stopped to start another one (see [`SWITCH_GRACE`]).
+    pub fn set_switching(&self) {
+        let _ = self.tx.send(Msg::Switching);
     }
 
     pub fn set_enabled(&self, on: bool) {
@@ -342,6 +337,9 @@ struct Presence {
     /// Last known position + when it was read. `estimate()` ages it while playing.
     pos: f64,
     pos_at: Instant,
+    /// Set while the next track is being resolved and loaded: the card on screen is kept until
+    /// the new track starts playing or [`SWITCH_GRACE`] runs out.
+    switching: Option<Instant>,
     // pushed — `Some` iff a card is currently shown (cards exist only while playing)
     sent: Option<Sent>,
     last_send: Option<Instant>,
@@ -374,6 +372,7 @@ impl Presence {
             played: false,
             pos: 0.0,
             pos_at: Instant::now(),
+            switching: None,
             sent: None,
             last_send: None,
             sends: VecDeque::new(),
@@ -393,6 +392,8 @@ impl Presence {
     fn apply(&mut self, msg: Msg) {
         match msg {
             Msg::Track(t) => {
+                // `switching` stays set: the new track is loaded but mpv has not started it yet,
+                // and only real playback (or the grace running out) ends the switch.
                 self.track = Some(*t);
                 self.track_at = Instant::now();
                 // Every track starts from the top in this app; the previous track's position must
@@ -407,7 +408,14 @@ impl Presence {
                 self.pos = pos;
                 self.pos_at = at;
             }
+            Msg::Switching => {
+                self.apply(Msg::Playing(false));
+                self.switching = Some(Instant::now());
+            }
             Msg::Playing(on) => {
+                if on {
+                    self.switching = None;
+                }
                 self.played |= on;
                 if self.playing != on {
                     // Fold the accrued playtime into `pos` before flipping, so pausing freezes the
@@ -462,6 +470,16 @@ impl Presence {
     fn plan(&self) -> Act {
         if !self.enabled {
             return Act::Idle;
+        }
+        // Between two tracks: leave the current card alone (no pause card, no clear) until the
+        // next track shows up or the grace runs out.
+        if self.sent.is_some() {
+            if let Some(rem) = self
+                .switching
+                .and_then(|at| SWITCH_GRACE.checked_sub(at.elapsed()))
+            {
+                return Act::Wait(rem.max(MIN_WAIT));
+            }
         }
         let want_card =
             self.track.is_some() && (self.playing || (self.cfg.show_paused && self.played));
@@ -531,7 +549,7 @@ impl Presence {
             return true;
         }
         // Seek detection: our aged position no longer matches the timeline we pushed. Doing it
-        // here, off the pushed timestamps, catches every seek — UI, media key, or Listen Together —
+        // here, off the pushed timestamps, catches every seek — UI, media key or tray —
         // for free, instead of hooking each caller of `player.seek`.
         let drift_ms = (self.estimate() * 1000.0) as i64 - (now_ms() - sent.start_ms);
         drift_ms.abs() > SEEK_DRIFT_MS
@@ -601,7 +619,7 @@ impl Presence {
 
         // "Hide details": the whole point is that nothing about the track leaves this machine, so
         // it short-circuits before any of it is attached. What friends see is the bare
-        // "Listening to Limusic" line, which is the only slot left to display.
+        // "Listening to AmbraMusic" line, which is the only slot left to display.
         if cfg.hide_details {
             act = act.status_display_type(activity::StatusDisplayType::Name);
         } else {
@@ -827,9 +845,8 @@ fn link_for(slot: &str, t: &Track) -> Option<String> {
     }
 }
 
-/// One configured button slot. The labels are deliberately English: they are Discord's content, not
-/// the app's chrome, and the settings preview mirrors these same strings so what the user sees in
-/// the preview is what their friends read.
+/// One configured button slot. Labels stay within Discord's 32-character limit; a button whose URL
+/// is too long is dropped rather than letting Discord reject the whole card.
 fn button_for(kind: &str, t: &Track) -> Option<activity::Button<'static>> {
     let (label, url) = match kind {
         "listen" => ("Ascolta su YouTube Music", link_for("title", t)?),
@@ -862,11 +879,13 @@ fn field(s: &str) -> String {
     out
 }
 
-/// Ready a thumbnail URL for Discord's card: request a decent resolution (see
-/// [`crate::media::cover_url`]) and refuse URLs over Discord's length limit.
+/// Ready a thumbnail URL for Discord's card: request a decent resolution and refuse URLs over Discord's length limit.
 fn discord_thumb(url: &str) -> Option<String> {
-    let wh = regex::Regex::new(r"=w\d+-h\d+").unwrap();
-    let size = regex::Regex::new(r"=s\d+").unwrap();
+    use std::sync::OnceLock;
+    static WH: OnceLock<regex::Regex> = OnceLock::new();
+    static SIZE: OnceLock<regex::Regex> = OnceLock::new();
+    let wh = WH.get_or_init(|| regex::Regex::new(r"=w\d+-h\d+").unwrap());
+    let size = SIZE.get_or_init(|| regex::Regex::new(r"=s\d+").unwrap());
     let sized = if wh.is_match(url) {
         wh.replace(url, "=w512-h512").into_owned()
     } else {
@@ -945,7 +964,7 @@ mod tests {
         );
         p.track_at = Instant::now() - TRACK_SETTLE - Duration::from_millis(10);
 
-        // mpv reports the length (state.rs hands it over the moment mpv transitions).
+        // mpv reports the length (the backend forwards it as soon as mpv knows it).
         p.apply(Msg::Duration(185.0));
         assert_eq!(
             p.plan(),
@@ -1445,6 +1464,49 @@ mod tests {
         p.duration = 185.0;
         p.last_send = Some(Instant::now() - Duration::from_secs(50));
         assert!(!p.wants_push());
+        assert_eq!(p.plan(), Act::Idle);
+    }
+
+    /// Skipping stops mpv while the next stream is resolved. That gap is not a pause: the card
+    /// stays (no clear frame), and the next push is the new track's card.
+    #[test]
+    fn a_track_switch_keeps_the_card_until_the_next_one_plays() {
+        let mut p = playing("old", 60.0);
+        p.duration = 200.0;
+        sent_now(&mut p, 60);
+
+        p.apply(Msg::Switching);
+        // mpv's own "stopped" flag lands too: still not a reason to take the card down.
+        p.apply(Msg::Playing(false));
+        assert!(matches!(p.plan(), Act::Wait(_)), "got {:?}", p.plan());
+
+        // The new track is loaded but mpv has not started it: still holding.
+        p.apply(Msg::Track(track("new")));
+        assert!(matches!(p.plan(), Act::Wait(_)), "got {:?}", p.plan());
+
+        // Playback starts: the switch is over and the new card goes out (after settle/length).
+        p.apply(Msg::Playing(true));
+        p.apply(Msg::Duration(180.0));
+        p.track_at = Instant::now() - TRACK_SETTLE - Duration::from_millis(10);
+        assert_eq!(p.plan(), Act::Push);
+    }
+
+    /// A track that never starts (stream unavailable) must not leave the old card up forever.
+    #[test]
+    fn a_failed_switch_clears_after_the_grace() {
+        let mut p = playing("old", 60.0);
+        sent_now(&mut p, 60);
+        p.apply(Msg::Switching);
+        p.switching = Some(Instant::now() - SWITCH_GRACE - Duration::from_millis(10));
+        assert_eq!(p.plan(), Act::Clear);
+    }
+
+    /// With no card up there is nothing to hold: a switch behaves like any stop.
+    #[test]
+    fn a_switch_without_a_card_is_idle() {
+        let mut p = Presence::new(true, RpcConfig::default());
+        p.apply(Msg::Track(track("abc")));
+        p.apply(Msg::Switching);
         assert_eq!(p.plan(), Act::Idle);
     }
 }

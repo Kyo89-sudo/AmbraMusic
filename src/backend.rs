@@ -187,6 +187,8 @@ pub enum Update {
     /// Stato del pulsante riproduzione casuale (si spegne quando cambia la coda).
     Shuffle(bool),
     Comments(CommentsUpdate),
+    /// Commento o risposta pubblicati: la GUI svuota il campo e chiude la risposta in corso.
+    CommentSent,
 }
 
 /// La scheda "Commenti" com'è ora.
@@ -727,6 +729,9 @@ impl Engine {
         let before = self.queue.len();
         for item in items {
             if seen.insert(item.video_id.clone()) {
+                if let Some(orig) = self.unshuffled.as_mut() {
+                    orig.push(item.clone());
+                }
                 self.queue.push(item);
             } else if let Some(have) = self.queue.iter_mut().find(|s| s.video_id == item.video_id) {
                 // Le schede di ricerca e Home non hanno l'album; la riga della radio sì.
@@ -933,7 +938,8 @@ impl Engine {
             let _ = p.stop();
         }
         if let Some(d) = &self.discord {
-            d.set_playing(false);
+            // Cambio di brano, non una pausa: Discord tiene la scheda finché parte il nuovo.
+            d.set_switching();
         }
         self.send(Update::Playing(false));
         self.send(Update::Position(0.0));
@@ -994,7 +1000,14 @@ impl Engine {
         if i >= self.queue.len() {
             return;
         }
-        self.queue.remove(i);
+        let removed = self.queue.remove(i);
+        // Con la riproduzione casuale attiva l'ordine originale va tenuto allineato, o
+        // spegnendola il brano tolto tornerebbe in coda.
+        if let Some(orig) = self.unshuffled.as_mut() {
+            if let Some(j) = orig.iter().position(|s| s.video_id == removed.video_id) {
+                orig.remove(j);
+            }
+        }
         if self.current == Some(i) {
             self.stop_playback();
         } else if let Some(cur) = self.current {
@@ -1005,6 +1018,10 @@ impl Engine {
         self.queue_update();
     }
     fn enqueue(&mut self, song: SongItem) {
+        // Anche nell'ordine originale: spegnendo la casuale il brano aggiunto non deve sparire.
+        if let Some(orig) = self.unshuffled.as_mut() {
+            orig.push(song.clone());
+        }
         self.queue.push(song);
         self.queue_update();
         self.status("Messo in coda.", false);
@@ -1066,7 +1083,7 @@ impl Engine {
             self.current = playing
                 .as_ref()
                 .and_then(|id| orig.iter().position(|s| &s.video_id == id))
-                .or(self.current);
+                .or(self.current.filter(|&i| i < orig.len()));
             self.queue = orig;
         }
         self.queue_update();
@@ -2131,9 +2148,18 @@ impl Engine {
         r: Result<Option<innertube::CommentThread>>,
     ) {
         if gen != self.comments.gen {
+            // L'elenco è cambiato nel frattempo (altro brano, account, ordine), ma il commento
+            // è comunque partito: il campo va svuotato, o un secondo invio lo duplicherebbe.
+            if r.is_ok() {
+                self.send(Update::CommentSent);
+                self.status("Commento pubblicato.", false);
+            }
             return;
         }
         self.comments.sending = false;
+        if r.is_ok() {
+            self.send(Update::CommentSent);
+        }
         match r {
             Ok(Some(thread)) => {
                 match &target {
