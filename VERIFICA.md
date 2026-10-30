@@ -1,4 +1,12 @@
-# Verifica AmbraMusic 0.5.7
+# Verifica AmbraMusic 0.5.8
+
+## Commenti, Discord e correzioni — 0.5.8, 2026-10-30
+
+- `cargo check --locked` e `cargo test --locked --bin AmbraMusic` superati su Linux x64 (Rust stabile, Slint 1.18.1, libmpv di sistema): 59 test, inclusi tre nuovi test Discord sul cambio di brano (scheda mantenuta, rimossa dopo l’attesa, nessuna attesa senza scheda).
+- `rustfmt --check` superato sui file Rust modificati. Restano due avvisi preesistenti, specifici della compilazione non Windows, su funzioni usate solo da Windows.
+- UI avviata in modalità demo con renderer software su display virtuale 1180×700: pulsante Commenti visibile solo con un brano impostato; apertura dalla coda, ritorno alla coda, apertura a pannello chiuso e richiusura verificati con clic reali. Per mostrare il pulsante è stata usata una build di prova con un brano fittizio, non inclusa nelle modifiche.
+- Non verificati: build Windows/MSVC, pubblicazione reale di commenti con account, Discord reale, screen reader (Narratore) sulle nuove etichette.
+
 
 ## UI e distribuzione Windows — 0.5.7, 2026-10-25
 

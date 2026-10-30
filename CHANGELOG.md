@@ -4,6 +4,32 @@ Le versioni seguono il formato `x.y.z`. La serie 0.x è in sviluppo; le patch 0.
 
 I controlli eseguiti sono descritti in [VERIFICA.md](VERIFICA.md). Le [note di lavoro dettagliate](docs/CHANGELOG-DETTAGLIATO.md) conservano lo storico originale.
 
+## [0.5.8] — 2026-10-30
+
+### Commenti
+
+- Nuovo pulsante Commenti nella barra del player, visibile solo con un brano in ascolto e la funzione attiva: apre la scheda Commenti anche dalla vista In riproduzione o dalle Impostazioni, e un secondo clic riporta il pannello com’era (coda, oppure chiuso).
+- I commenti non si scaricano più quando la scheda non si vede: pannello chiuso, vista In riproduzione aperta o pagina Impostazioni.
+- Il testo scritto resta nel campo finché YouTube non conferma la pubblicazione: un invio fallito non lo cancella più. Durante l’invio il campo è in sola lettura.
+- La risposta in corso segue il commento scelto anche quando si caricano risposte sopra di esso, invece di passare alla riga che ne prende il posto.
+- L’elenco si aggiorna riga per riga: foto degli autori e mi piace non ricreano più tutte le righe.
+- Etichette per screen reader su commenti, mi piace, Rispondi, risposte, campo di scrittura, schede del pannello e pulsanti a icona del player.
+
+### Discord Rich Presence
+
+- Cambio di brano senza sfarfallio: la scheda del brano precedente resta finché parte il successivo, invece di essere tolta e rimessa (due invii su cinque consentiti ogni 20 secondi). Se il brano nuovo non parte entro 12 secondi, la scheda viene tolta.
+- Espressioni regolari delle miniature compilate una sola volta.
+- Documentazione del modulo aggiornata ad AmbraMusic, senza riferimenti a Limusic/Metrolist e a impostazioni inesistenti.
+
+### Correzioni
+
+- Riproduzione casuale: brani aggiunti in coda o dalla radio durante la casuale non spariscono più spegnendola, e i brani tolti non ricompaiono.
+- Volume: cursore leggermente più corto (80 px) per fare spazio al pulsante Commenti alla larghezza minima.
+
+### Verifiche
+
+[Dettagli in VERIFICA.md](VERIFICA.md).
+
 ## [0.5.7] — 2026-10-25
 
 ### Distribuzione Windows

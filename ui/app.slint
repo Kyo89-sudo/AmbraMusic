@@ -163,7 +163,12 @@ component Action inherits Rectangle {
     in property <bool> enabled: true;
     in property <length> font-size: 14px;
     in property <color> glyph-color: root.accent ? Theme.on-amber : root.selected ? Theme.accent : root.enabled ? Theme.text : Theme.faint;
+    /// Nome letto dagli screen reader per i pulsanti con la sola icona.
+    in property <string> label;
     callback clicked;
+    accessible-role: button;
+    accessible-label: root.label != "" ? root.label : root.text;
+    accessible-action-default => { if root.enabled { root.clicked(); } }
     height: 36px; min-width: 36px;
     border-radius: 10px;
     background: root.accent ? Theme.amber : (touch.pressed && root.enabled) ? Theme.pressed : root.selected ? Theme.selected : (touch.has-hover && root.enabled) ? Theme.hover : transparent;
@@ -466,6 +471,9 @@ component PanelTab inherits Rectangle {
     in property <string> badge;
     in property <bool> active;
     callback clicked;
+    accessible-role: tab;
+    accessible-label: root.badge != "" ? root.text + " (" + root.badge + ")" : root.text;
+    accessible-action-default => { root.clicked(); }
     height: 32px; width: row.preferred-width;
     row := HorizontalLayout { padding-left: 4px; padding-right: 4px; spacing: 5px;
         Text { text: root.text; color: root.active ? Theme.text : t.has-hover ? Theme.text : Theme.muted; font-size: 14px; font-weight: root.active ? 700 : 500; vertical-alignment: center; }
@@ -488,6 +496,10 @@ component CommentView inherits Rectangle {
     height: body.preferred-height;
     border-radius: 10px;
     background: root.replying ? Theme.selected : transparent;
+    accessible-role: list-item;
+    accessible-label: (root.item.reply ? "Risposta di " : "Commento di ") + root.item.author
+        + (root.item.published != "" ? ", " + root.item.published : "") + ": " + root.item.text
+        + (root.item.likes != "" ? ". Mi piace: " + root.item.likes : "");
     body := HorizontalLayout { padding: 6px; padding-left: 6px + root.indent; spacing: 10px; alignment: start;
         VerticalLayout { alignment: start; padding-top: 2px;
             Avatar { width: root.avatar-size; height: root.avatar-size; source: root.item.avatar; has-image: root.item.has-avatar; name: root.item.initial; } }
@@ -505,6 +517,8 @@ component CommentView inherits Rectangle {
             Text { text: root.item.text; color: Theme.text; font-size: 13px; wrap: word-wrap; width: root.text-width - root.indent - root.avatar-size + 30px; }
             HorizontalLayout { spacing: 2px; alignment: start; height: 26px;
                 Rectangle { width: likes.preferred-width; border-radius: 13px; background: lt.has-hover && root.item.can-like ? Theme.hover : transparent;
+                    accessible-role: button; accessible-label: root.item.liked ? "Togli mi piace" : "Mi piace";
+                    accessible-action-default => { if root.item.can-like { root.like(); } }
                     likes := HorizontalLayout { padding-left: 6px; padding-right: 8px; spacing: 5px;
                         Icon { text: G.thumb-up; size: 13px; color: root.item.liked ? Theme.accent : Theme.muted; y: (parent.height - self.height) / 2; }
                         if root.item.likes != "": Text { text: root.item.likes; color: root.item.liked ? Theme.accent : Theme.muted; font-size: 12px; vertical-alignment: center; } }
@@ -512,11 +526,13 @@ component CommentView inherits Rectangle {
                 if root.item.hearted: Rectangle { width: 24px;
                     FilledShape { data: Shape.heart; tint: #ff5a3c; size: 13px; x: (parent.width - self.width) / 2; y: (parent.height - self.height) / 2; } }
                 if root.item.can-reply: Rectangle { width: rl.preferred-width; border-radius: 13px; background: rt.has-hover ? Theme.hover : transparent;
+                    accessible-role: button; accessible-label: "Rispondi a " + root.item.author; accessible-action-default => { root.reply(); }
                     rl := HorizontalLayout { padding-left: 8px; padding-right: 8px;
                         Text { text: "Rispondi"; color: Theme.muted; font-size: 12px; font-weight: 600; vertical-alignment: center; } }
                     rt := TouchArea { mouse-cursor: pointer; clicked => { root.reply(); } } }
             }
             if root.item.replies != "": Rectangle { height: 26px; width: rr.preferred-width; border-radius: 13px; background: st.has-hover ? Theme.selected : transparent;
+                accessible-role: button; accessible-label: root.item.replies; accessible-action-default => { root.show-replies(); }
                 rr := HorizontalLayout { padding-left: 6px; padding-right: 10px; spacing: 6px;
                     Icon { text: G.down; size: 14px; color: Theme.accent; y: (parent.height - self.height) / 2; }
                     Text { text: root.item.replies; color: Theme.accent; font-size: 12px; font-weight: 700; vertical-alignment: center; } }
@@ -613,7 +629,7 @@ export component AppWindow inherits Window {
     background: Theme.bg; default-font-family: "Segoe UI"; default-font-size: 14px;
     icon: @image-url("../assets/icon.png");
     in property <image> app-icon: @image-url("../assets/icon-96.png");
-    in property <string> version: "0.5.7";
+    in property <string> version: "0.5.8";
     // Contenuto della pagina
     in property <[MusicRow]> rows;
     in property <[ShelfData]> shelves;
@@ -659,6 +675,8 @@ export component AppWindow inherits Window {
     in property <bool> comments-can-write: false;
     in property <bool> comments-sending: false;
     in-out property <int> comments-reply-to: -1;
+    /// Testo nel campo dei commenti; lo svuota il backend quando la pubblicazione riesce.
+    in-out property <string> comments-draft;
     in-out property <bool> comments-enabled: true;
     callback comments-open();
     callback panel-tab(int);
@@ -778,6 +796,30 @@ export component AppWindow inherits Window {
         root.np-visible = false;
         root.page = 1;
         root.search(q);
+    }
+
+    // Commenti a richiesta: il pulsante del player apre la scheda e la richiude, riportando il
+    // pannello com'era. Finché la scheda non si vede, il backend non scarica nulla.
+    property <bool> comments-showing: root.show-right && !root.np-visible && root.right-tab == 2 && root.comments-enabled;
+    property <bool> comments-hid-panel: false;
+    changed comments-showing => {
+        if self.comments-showing { root.comments-open(); } else { root.panel-tab(-1); }
+    }
+    function toggle-comments() {
+        if root.comments-showing {
+            root.right-tab = 0;
+            if root.comments-hid-panel { root.queue-visible = false; }
+            root.comments-hid-panel = false;
+            return;
+        }
+        root.comments-hid-panel = !root.show-right;
+        root.np-visible = false;
+        root.suggest-open = false;
+        if root.page == 5 {
+            if root.can-go-back { root.back(); } else { root.go(0); }
+        }
+        root.queue-visible = true;
+        root.right-tab = 2;
     }
 
     property <length> side-w: 230px;
@@ -1062,7 +1104,7 @@ export component AppWindow inherits Window {
                             clicked => { root.right-tab = 2; root.comments-open(); } }
                         if root.playlists-right && root.signed-in: PanelTab { text: "Playlist"; active: root.right-tab == 1; clicked => { root.right-tab = 1; root.panel-tab(1); } }
                         Rectangle { horizontal-stretch: 1; }
-                        Action { glyph: G.close; icon-size: 15px; width: 30px; height: 30px; clicked => { root.queue-visible = false; } }
+                        Action { glyph: G.close; icon-size: 15px; width: 30px; height: 30px; label: "Chiudi il pannello"; clicked => { root.queue-visible = false; root.comments-hid-panel = false; } }
                     }
                     if root.right-tab == 0 || (root.right-tab == 1 && !(root.playlists-right && root.signed-in)) || (root.right-tab == 2 && !root.comments-enabled): VerticalLayout { spacing: 8px; vertical-stretch: 1;
                         Text { text: root.queue-source != "" ? "Stai ascoltando da " + root.queue-source : root.queue.length + " brani"; color: Theme.muted; font-size: 12px; overflow: elide; }
@@ -1117,22 +1159,27 @@ export component AppWindow inherits Window {
                             if root.comments-reply-to >= 0: HorizontalLayout { spacing: 6px; height: 22px;
                                 Icon { text: G.reply; size: 13px; color: Theme.accent; y: (parent.height - self.height) / 2; }
                                 Text { text: "Rispondi a " + root.comments[root.comments-reply-to].author; color: Theme.accent; font-size: 12px; font-weight: 600; overflow: elide; vertical-alignment: center; horizontal-stretch: 1; }
-                                Action { glyph: G.close; icon-size: 12px; width: 22px; height: 22px; clicked => { root.comments-reply-to = -1; } } }
+                                Action { glyph: G.close; icon-size: 12px; width: 22px; height: 22px; label: "Annulla la risposta"; clicked => { root.comments-reply-to = -1; } } }
                             Rectangle { height: 42px; border-radius: 21px; background: Theme.field;
                                 border-width: message.has-focus ? 2px : 1px; border-color: message.has-focus ? #ff8a12 : Theme.line;
                                 HorizontalLayout { padding-left: 6px; padding-right: 5px; spacing: 8px;
                                     Avatar { width: 28px; height: 28px; source: root.account-avatar; has-image: root.has-avatar; name: root.account-initial; y: (parent.height - self.height) / 2; }
                                     Rectangle { horizontal-stretch: 1;
                                         if message.text == "": Text { text: root.comments-reply-to >= 0 ? "Scrivi una risposta…" : "Aggiungi un commento…"; color: Theme.faint; font-size: 13px; vertical-alignment: center; width: 100%; height: 100%; overflow: elide; }
-                                        message := TextInput { color: Theme.text; font-size: 13px; selection-background-color: #ff8a1260; vertical-alignment: center; single-line: true;
-                                            accepted => { if self.text != "" && !root.comments-sending { root.comment-send(self.text, root.comments-reply-to); self.text = ""; root.comments-reply-to = -1; } } }
+                                        // Il testo resta finché YouTube non conferma: se l'invio fallisce non va perso.
+                                        message := TextInput { text <=> root.comments-draft; read-only: root.comments-sending;
+                                            color: Theme.text; font-size: 13px; selection-background-color: #ff8a1260; vertical-alignment: center; single-line: true;
+                                            accessible-label: root.comments-reply-to >= 0 ? "Scrivi una risposta" : "Aggiungi un commento";
+                                            accepted => { if self.text != "" && !root.comments-sending { root.comment-send(self.text, root.comments-reply-to); } } }
                                     }
                                     if root.comments-sending: Spinner { width: 20px; height: 20px; y: (parent.height - self.height) / 2; }
                                     if !root.comments-sending: Rectangle { width: 32px; height: 32px; border-radius: 16px; y: (parent.height - self.height) / 2;
                                         background: message.text != "" ? Theme.amber : transparent; border-width: message.text != "" ? 1px : 0px; border-color: Theme.rim;
                                         Icon { text: G.send; size: 15px; color: message.text != "" ? Theme.on-amber : Theme.faint; x: (parent.width - self.width) / 2 - 1px; y: (parent.height - self.height) / 2; }
+                                        accessible-role: button; accessible-label: "Pubblica";
+                                        accessible-action-default => { if message.text != "" { root.comment-send(message.text, root.comments-reply-to); } }
                                         TouchArea { enabled: message.text != ""; mouse-cursor: message.text != "" ? pointer : default;
-                                            clicked => { root.comment-send(message.text, root.comments-reply-to); message.text = ""; root.comments-reply-to = -1; } } }
+                                            clicked => { root.comment-send(message.text, root.comments-reply-to); } } }
                                 }
                             }
                         }
@@ -1179,16 +1226,28 @@ export component AppWindow inherits Window {
                         Text { text: root.length; color: Theme.muted; font-size: 11px; width: 40px; vertical-alignment: center; }
                     }
                 }
-                HorizontalLayout { width: 220px; spacing: 6px; alignment: end;
+                HorizontalLayout { width: 244px; spacing: 6px; alignment: end;
                     Action { glyph: root.volume <= 0 ? G.mute : root.volume < 50 ? G.volume-low : G.volume; width: 34px; icon-size: 17px; y: (parent.height - self.height) / 2;
+                        label: root.volume <= 0 ? "Riattiva audio" : "Disattiva audio";
                         clicked => {
                             if root.volume > 0 { root.volume-before-mute = root.volume; root.volume = 0; } else { root.volume = max(5, root.volume-before-mute); }
                             root.change-volume(root.volume);
                         } }
-                    AmberSlider { width: 90px; y: (parent.height - self.height) / 2; value: root.volume; minimum: 0; maximum: 100;
+                    AmberSlider { width: 80px; y: (parent.height - self.height) / 2; value: root.volume; minimum: 0; maximum: 100;
                         changed(v) => { root.volume = v; root.change-volume(v); } }
-                    Action { glyph: G.queue; width: 34px; selected: root.show-right; icon-size: 17px; y: (parent.height - self.height) / 2; clicked => { root.queue-visible = !root.queue-visible; } }
-                    Action { glyph: root.np-visible ? G.down : G.up; width: 34px; selected: root.np-visible; icon-size: 17px; y: (parent.height - self.height) / 2; clicked => { root.np-visible = !root.np-visible; } }
+                    // Commenti del brano: solo con un brano in ascolto e la funzione attiva.
+                    if root.comments-enabled && root.track-id != "": Action { glyph: G.comment; width: 34px; icon-size: 17px; y: (parent.height - self.height) / 2;
+                        selected: root.comments-showing; label: root.comments-showing ? "Chiudi i commenti" : "Commenti del brano";
+                        clicked => { root.toggle-comments(); } }
+                    Action { glyph: G.queue; width: 34px; selected: root.show-right && !(root.right-tab == 2 && root.comments-enabled); icon-size: 17px; y: (parent.height - self.height) / 2;
+                        label: "Coda";
+                        clicked => {
+                            if root.show-right && root.right-tab == 2 && root.comments-enabled { root.right-tab = 0; }
+                            else { root.queue-visible = !root.queue-visible; }
+                        } }
+                    Action { glyph: root.np-visible ? G.down : G.up; width: 34px; selected: root.np-visible; icon-size: 17px; y: (parent.height - self.height) / 2;
+                        label: root.np-visible ? "Chiudi In riproduzione" : "Apri In riproduzione";
+                        clicked => { root.np-visible = !root.np-visible; } }
                 }
             }
     }
