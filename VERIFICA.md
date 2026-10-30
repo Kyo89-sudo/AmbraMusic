@@ -1,4 +1,10 @@
-# Verifica AmbraMusic 0.5.8
+# Verifica AmbraMusic 0.5.9
+
+## Account all’avvio — 0.5.9, 2026-10-30
+
+- `cargo test --bin AmbraMusic` superato su Linux (59 test); `rustfmt --check` superato sui file modificati.
+- Avvio su display virtuale con sessione e nome account fittizi: nei primi secondi l’intestazione mostra l’account attenuato, poi torna ad Accedi quando la verifica fallisce (ambiente senza accesso a YouTube). Accesso Google reale non provato.
+
 
 ## Commenti, Discord e correzioni — 0.5.8, 2026-10-30
 

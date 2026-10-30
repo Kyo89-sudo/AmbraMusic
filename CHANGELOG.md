@@ -4,6 +4,13 @@ Le versioni seguono il formato `x.y.z`. La serie 0.x è in sviluppo; le patch 0.
 
 I controlli eseguiti sono descritti in [VERIFICA.md](VERIFICA.md). Le [note di lavoro dettagliate](docs/CHANGELOG-DETTAGLIATO.md) conservano lo storico originale.
 
+## [0.5.9] — 2026-10-30
+
+### Account
+
+- All’avvio con un accesso salvato, l’intestazione mostra subito nome e foto dell’account (attenuati) mentre la sessione si verifica in rete, invece del pulsante Accedi. Se la verifica non riesce si torna ad Accedi.
+- Il nome dell’ultimo account si ricorda nelle impostazioni (mai i cookie) e si dimentica alla disconnessione o quando l’accesso salvato scade. Dopo l’aggiornamento vale dal secondo avvio, dopo il primo accesso verificato.
+
 ## [0.5.8] — 2026-10-30
 
 ### Commenti

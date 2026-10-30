@@ -36,6 +36,9 @@ pub struct Settings {
     pub autoplay: bool,
     /// Scheda "Commenti" nel pannello di destra.
     pub comments: bool,
+    /// Nome dell'account collegato, mostrato subito all'avvio mentre l'accesso salvato si
+    /// verifica in rete. Solo il nome visualizzato: i cookie restano in `session.dat`.
+    pub account_name: Option<String>,
     pub favorites: Vec<SongItem>,
 }
 impl Default for Settings {
@@ -49,6 +52,7 @@ impl Default for Settings {
             open_player: false,
             autoplay: true,
             comments: true,
+            account_name: None,
             favorites: vec![],
         }
     }
@@ -1290,7 +1294,12 @@ impl Engine {
                 self.tube = tube;
                 self.saved_jar = None;
                 let saved = self.save_session();
-                self.send(Update::Account(account.name.unwrap_or_default(), true));
+                let name = account.name.unwrap_or_default();
+                if saved && self.settings.account_name.as_deref() != Some(name.as_str()) {
+                    self.settings.account_name = Some(name.clone());
+                    self.persist();
+                }
+                self.send(Update::Account(name, true));
                 // I token dei commenti appartengono all'account con cui sono stati letti.
                 self.comments.clear();
                 self.comments_load();
@@ -1321,6 +1330,8 @@ impl Engine {
                 self.send(Update::LoginPending(false));
                 match origin {
                     Origin::Restore if offline => {
+                        // La sessione resta salvata, ma senza verifica non si mostra collegati.
+                        self.send(Update::Account("Accedi".into(), false));
                         self.status(
                             "Nessuna connessione: l’accesso salvato verrà riprovato al prossimo avvio.",
                             false,
@@ -1373,9 +1384,16 @@ impl Engine {
             }
         }
     }
+    fn forget_account_name(&mut self) {
+        if self.settings.account_name.take().is_some() {
+            self.persist();
+        }
+    }
     fn expired_saved_session(&mut self) {
         self.store.clear();
         self.saved_jar = None;
+        self.forget_account_name();
+        self.send(Update::Account("Accedi".into(), false));
         self.send(Update::SessionSaved(false));
         self.status(
             "L’accesso salvato è scaduto: accedi di nuovo da Account e opzioni.",
@@ -1526,6 +1544,7 @@ impl Engine {
         self.tube = anonymous();
         self.store.clear();
         self.saved_jar = None;
+        self.forget_account_name();
         self.send(Update::SessionSaved(false));
         self.send(Update::LoginPending(false));
         self.send(Update::Account("Accedi".into(), false));
