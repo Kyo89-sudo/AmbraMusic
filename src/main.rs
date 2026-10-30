@@ -53,7 +53,23 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     ui.set_autoplay(settings.autoplay);
     ui.set_comments_enabled(settings.comments);
     ui.set_google_login_available(login::SUPPORTED && !demo);
-    ui.set_session_saved(session::Store::new(&data).exists());
+    let session_saved = session::Store::new(&data).exists();
+    ui.set_session_saved(session_saved);
+    // Accesso salvato: nome e foto dell'ultima volta subito nell'intestazione, mentre il backend
+    // verifica la sessione in rete (può richiedere qualche secondo, o un rinnovo dei cookie).
+    if let Some(name) = settings
+        .account_name
+        .as_deref()
+        .filter(|n| session_saved && !demo && !n.is_empty())
+    {
+        ui.set_account_initial(account_initial(name).into());
+        ui.set_account(name.into());
+        ui.set_account_restoring(true);
+        if let Some(img) = load(&Some(data.join("avatar.png"))) {
+            ui.set_account_avatar(img);
+            ui.set_has_avatar(true);
+        }
+    }
     ui.invoke_apply_theme(settings.dark());
 
     let (updates, receiver) = std::sync::mpsc::channel();
@@ -342,12 +358,11 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                         ui.set_busy(b);
                     }
                     Update::Account(name, on) => {
-                        let initial: String = name
-                            .chars()
-                            .next()
-                            .map(|c| c.to_uppercase().collect())
-                            .unwrap_or_default();
-                        ui.set_account_initial(initial.into());
+                        if !on && ui.get_account_restoring() {
+                            ui.set_has_avatar(false);
+                        }
+                        ui.set_account_restoring(false);
+                        ui.set_account_initial(account_initial(&name).into());
                         ui.set_account(name.into());
                         ui.set_signed_in(on);
                     }
@@ -553,4 +568,12 @@ fn update_comments(ui: &AppWindow, items: Vec<CommentItem>, reset: bool) {
             model.push(item);
         }
     }
+}
+
+/// Iniziale maiuscola del nome dell'account, per l'avatar senza foto.
+fn account_initial(name: &str) -> String {
+    name.chars()
+        .next()
+        .map(|c| c.to_uppercase().collect())
+        .unwrap_or_default()
 }

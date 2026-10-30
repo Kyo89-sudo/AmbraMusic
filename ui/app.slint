@@ -629,7 +629,7 @@ export component AppWindow inherits Window {
     background: Theme.bg; default-font-family: "Segoe UI"; default-font-size: 14px;
     icon: @image-url("../assets/icon.png");
     in property <image> app-icon: @image-url("../assets/icon-96.png");
-    in property <string> version: "0.5.8";
+    in property <string> version: "0.5.9";
     // Contenuto della pagina
     in property <[MusicRow]> rows;
     in property <[ShelfData]> shelves;
@@ -722,6 +722,8 @@ export component AppWindow inherits Window {
     in-out property <bool> advanced-visible: false;
     in-out property <bool> dark-theme: true;
     in property <bool> signed-in: false;
+    /// Accesso salvato in verifica all'avvio: si mostra già l'account, attenuato.
+    in property <bool> account-restoring: false;
     in property <bool> session-saved: false;
     in property <bool> google-login-available: true;
     in property <bool> login-pending: false;
@@ -887,8 +889,9 @@ export component AppWindow inherits Window {
                             edited(t) => { root.suggest-open = t != ""; root.suggest(t); }
                             cleared => { root.suggest-open = false; root.suggest(""); } }
                         Rectangle { horizontal-stretch: 0.01; }
-                        if root.signed-in: AccountChip { avatar: root.account-avatar; has-avatar: root.has-avatar; name: root.account; initial: root.account-initial; clicked => { root.open-settings(0); } }
-                        if !root.signed-in: Pill { glyph: G.login; text: "Accedi"; accent: true; clicked => { root.open-settings(0); } }
+                        if root.signed-in || root.account-restoring: AccountChip { avatar: root.account-avatar; has-avatar: root.has-avatar; name: root.account; initial: root.account-initial;
+                            opacity: root.account-restoring ? 0.6 : 1.0; clicked => { root.open-settings(0); } }
+                        if !root.signed-in && !root.account-restoring: Pill { glyph: G.login; text: "Accedi"; accent: true; clicked => { root.open-settings(0); } }
                     }
                 }
                 Rectangle { vertical-stretch: 1;
