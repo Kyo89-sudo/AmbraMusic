@@ -7,6 +7,9 @@ on:
       version:
         description: 'Versione (es. 0.5.8)'
         required: true
+  push:
+    branches: ['fix/**', 'release/**']
+    paths: ['docs/RELEASE-*.md', 'scripts/release-notes.sh', '.github/workflows/release-notes.yml']
 
 permissions:
   contents: write
@@ -21,6 +24,11 @@ jobs:
           GH_TOKEN: ${{ github.token }}
           VERSION: ${{ inputs.version }}
         run: |
+          if [ -z "$VERSION" ]; then VERSION=$(sed -n 's/^version = "\(.*\)"/\1/p' Cargo.toml | head -1); fi
+          # Solo una release in bozza già esistente: niente da fare altrimenti.
+          if [ "$(gh release view "v$VERSION" --json isDraft --jq .isDraft 2>/dev/null)" != "true" ]; then
+            echo "Nessuna release in bozza v$VERSION."; exit 0
+          fi
           bash scripts/release-notes.sh "$VERSION" > notes.md
           head -3 notes.md
           gh release edit "v$VERSION" --notes-file notes.md

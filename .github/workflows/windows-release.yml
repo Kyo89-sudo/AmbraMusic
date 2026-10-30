@@ -12,6 +12,7 @@ on:
   push:
     tags: ['v*']
     branches: ['fix/**', 'release/**']
+    paths-ignore: ['docs/**', '*.md', 'scripts/release-notes.sh', '.github/workflows/release-notes.yml']
 
 permissions:
   contents: write
