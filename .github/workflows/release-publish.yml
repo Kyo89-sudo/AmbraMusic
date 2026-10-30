@@ -1,0 +1,30 @@
+# Pubblica una release in bozza: tag creato su main, note aggiornate, release segnata come ultima.
+name: Release publish
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Versione da pubblicare (es. 0.5.8)'
+        required: true
+
+permissions:
+  contents: write
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+      - name: Pubblica
+        env:
+          GH_TOKEN: ${{ github.token }}
+          VERSION: ${{ inputs.version }}
+        run: |
+          grep -q "^version = \"$VERSION\"" Cargo.toml || { echo "main non è alla versione $VERSION"; exit 1; }
+          [ "$(gh release view "v$VERSION" --json isDraft --jq .isDraft)" = "true" ] || { echo "Nessuna bozza v$VERSION"; exit 1; }
+          bash scripts/release-notes.sh "$VERSION" > notes.md
+          gh release edit "v$VERSION" --target "$(git rev-parse HEAD)" --notes-file notes.md --draft=false --latest
+          gh release view "v$VERSION" --json url,tagName,isDraft
