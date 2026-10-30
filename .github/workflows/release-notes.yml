@@ -1,4 +1,4 @@
-# Aggiorna il testo di una release in bozza da docs/RELEASE-<versione>.md, con logo e link assoluti.
+# Aggiorna il testo di una release (bozza o pubblicata) da docs/RELEASE-<versione>.md, con logo e link assoluti.
 name: Release notes
 
 on:
@@ -25,9 +25,9 @@ jobs:
           VERSION: ${{ inputs.version }}
         run: |
           if [ -z "$VERSION" ]; then VERSION=$(sed -n 's/^version = "\(.*\)"/\1/p' Cargo.toml | head -1); fi
-          # Solo una release in bozza già esistente: niente da fare altrimenti.
-          if [ "$(gh release view "v$VERSION" --json isDraft --jq .isDraft 2>/dev/null)" != "true" ]; then
-            echo "Nessuna release in bozza v$VERSION."; exit 0
+          # Solo se la release esiste già (in bozza o pubblicata): il testo segue il file delle note.
+          if ! gh release view "v$VERSION" --json tagName >/dev/null 2>&1; then
+            echo "Nessuna release v$VERSION."; exit 0
           fi
           bash scripts/release-notes.sh "$VERSION" > notes.md
           head -3 notes.md
