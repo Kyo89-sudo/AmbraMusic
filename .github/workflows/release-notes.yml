@@ -1,0 +1,26 @@
+# Aggiorna il testo di una release in bozza da docs/RELEASE-<versione>.md, con logo e link assoluti.
+name: Release notes
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Versione (es. 0.5.8)'
+        required: true
+
+permissions:
+  contents: write
+
+jobs:
+  notes:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Aggiorna le note della release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          VERSION: ${{ inputs.version }}
+        run: |
+          bash scripts/release-notes.sh "$VERSION" > notes.md
+          head -3 notes.md
+          gh release edit "v$VERSION" --notes-file notes.md
