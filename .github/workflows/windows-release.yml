@@ -4,9 +4,17 @@ name: Windows release
 
 on:
   workflow_dispatch:
+    inputs:
+      draft_release:
+        description: 'Allega i pacchetti a una release in bozza (non pubblica)'
+        type: boolean
+        default: false
   push:
     tags: ['v*']
     branches: ['fix/**', 'release/**']
+
+permissions:
+  contents: write
 
 jobs:
   build:
@@ -78,3 +86,21 @@ jobs:
             dist/AmbraMusic-*-portable-x64.zip
             dist/SHA256SUMS.txt
           if-no-files-found: error
+
+      # Solo su richiesta: release in bozza, visibile ai soli collaboratori finché non la pubblichi.
+      - name: Release in bozza
+        if: ${{ github.event_name == 'workflow_dispatch' && inputs.draft_release }}
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          $v = $env:VERSION
+          $tag = "v$v"
+          $files = @("dist\AmbraMusic-Setup-$v-x64.exe", "dist\AmbraMusic-$v-portable-x64.zip", "dist\SHA256SUMS.txt")
+          gh release view $tag 2>$null
+          if ($LASTEXITCODE -eq 0) {
+            gh release upload $tag @files --clobber
+          } else {
+            gh release create $tag @files --draft --target $env:GITHUB_SHA --title "AmbraMusic $v" --notes-file "docs/RELEASE-$v.md"
+          }
+          if ($LASTEXITCODE -ne 0) { throw 'Creazione della release in bozza non riuscita.' }
